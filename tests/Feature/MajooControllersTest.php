@@ -1,0 +1,511 @@
+<?php
+
+use App\Models\Asistencia;
+use App\Models\DetalleVenta;
+use App\Models\Empleado;
+use App\Models\MovimientoInventario;
+use App\Models\Producto;
+use App\Models\ProductoProveedor;
+use App\Models\Proveedor;
+use App\Models\Venta;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+beforeEach(function () {
+    config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:', 'session.block_store' => 'array']);
+    DB::purge('sqlite');
+
+    Schema::create('empleado', function (Blueprint $table) {
+        $table->increments('id_empleado');
+        $table->string('nombres', 100);
+        $table->string('documento_identidad', 20)->unique();
+        $table->string('usuario', 50)->nullable()->unique();
+        $table->boolean('es_eventual')->nullable()->default(false);
+    });
+
+    Schema::create('asistencia', function (Blueprint $table) {
+        $table->increments('id_asistencia');
+        $table->integer('id_empleado');
+        $table->date('fecha');
+        $table->time('hora_ingreso')->nullable();
+        $table->time('hora_salida')->nullable();
+        $table->foreign('id_empleado')->references('id_empleado')->on('empleado')->cascadeOnDelete();
+    });
+
+    Schema::create('producto', function (Blueprint $table) {
+        $table->increments('id_producto');
+        $table->string('nombre_producto', 150);
+        $table->integer('stock_actual')->default(0);
+        $table->integer('stock_minimo_alerta')->default(10);
+        $table->decimal('precio_venta', 10, 2);
+    });
+
+    Schema::create('proveedor', function (Blueprint $table) {
+        $table->increments('id_proveedor');
+        $table->string('nombre_empresa', 100);
+    });
+
+    Schema::create('producto_proveedor', function (Blueprint $table) {
+        $table->integer('id_producto');
+        $table->integer('id_proveedor');
+        $table->decimal('precio_compra', 10, 2);
+        $table->primary(['id_producto', 'id_proveedor']);
+        $table->foreign('id_producto')->references('id_producto')->on('producto')->cascadeOnDelete();
+        $table->foreign('id_proveedor')->references('id_proveedor')->on('proveedor')->cascadeOnDelete();
+    });
+
+    Schema::create('movimiento_inventario', function (Blueprint $table) {
+        $table->increments('id_movimiento');
+        $table->integer('id_producto');
+        $table->string('tipo_movimiento', 20);
+        $table->integer('cantidad');
+        $table->string('motivo', 200)->nullable();
+        $table->timestamp('fecha_hora')->useCurrent();
+        $table->foreign('id_producto')->references('id_producto')->on('producto');
+    });
+
+    Schema::create('venta', function (Blueprint $table) {
+        $table->increments('id_venta');
+        $table->timestamp('fecha_hora')->useCurrent();
+        $table->string('cliente_nombre', 100)->nullable();
+        $table->string('cliente_documento', 20)->nullable();
+        $table->string('metodo_pago', 50);
+        $table->decimal('total_venta', 10, 2);
+    });
+
+    Schema::create('detalle_venta', function (Blueprint $table) {
+        $table->increments('id_detalle');
+        $table->integer('id_venta');
+        $table->integer('id_producto');
+        $table->integer('cantidad');
+        $table->decimal('precio_unitario', 10, 2);
+        $table->foreign('id_venta')->references('id_venta')->on('venta');
+        $table->foreign('id_producto')->references('id_producto')->on('producto');
+    });
+});
+
+afterEach(function () {
+    DB::purge('sqlite');
+});
+
+beforeEach(function () {
+    (require database_path('migrations/2026_09_25_200342_add_authentication_fields_to_empleado_table.php'))->up();
+    $this->actingAs(Empleado::factory()->withAccess('admin')->make(['id_empleado' => 2147483647]));
+});
+test('module routes return their expected view data', function (string $routeName, string $viewName, array $variables) {
+
+    $this->get(route($routeName))->assertOk()->assertViewIs($viewName)->assertViewHasAll($variables);
+})->with([
+    ['productos.index', 'productos.index', ['productos']],
+    ['productos.create', 'productos.crear', []],
+    ['proveedores.index', 'proveedores.index', ['proveedores', 'productos', 'precios']],
+    ['proveedores.asignar-producto', 'proveedores.asignar_producto', ['proveedores', 'productos']],
+    ['empleados.index', 'empleados.index', ['empleados']],
+    ['inventario.index', 'inventario.index', ['productos', 'movimientos']],
+    ['asistencia.index', 'asistencia.index', ['empleados', 'asistencias']],
+    ['ventas.index', 'ventas.index', ['productos', 'ventas', 'carrito']],
+    ['ventas.nueva', 'ventas.nueva', ['productos', 'carrito', 'totalCarrito']],
+    ['dashboard.index', 'dashboard.index', ['resumen', 'rankingProductos', 'ventasPorMes', 'ventasPorMetodo']],
+]);
+
+test('edit and detail routes bind legacy primary keys', function (string $modelClass, string $routeName, string $viewName, string $variable) {
+    $model = $modelClass::factory()->create();
+
+    $this->get(route($routeName, $model))->assertOk()->assertViewIs($viewName)
+        ->assertViewHas($variable, fn (Model $value): bool => $value->is($model));
+})->with([
+    [Producto::class, 'productos.edit', 'productos.editar', 'producto'],
+    [Empleado::class, 'empleados.edit', 'empleados.editar', 'empleado'],
+    [Asistencia::class, 'asistencia.edit', 'asistencia.editar', 'asistencia'],
+    [Venta::class, 'ventas.show', 'ventas.detalle', 'venta'],
+]);
+
+test('products can be created edited and deleted without changing stock through the edit form', function () {
+    $data = Producto::factory()->raw(['stock_actual' => 5, 'precio_venta' => '12.50']);
+    $this->post(route('productos.store'), $data)->assertRedirectToRoute('productos.index');
+    $producto = Producto::sole();
+    $this->assertDatabaseHas('producto', $data);
+
+    $this->put(route('productos.update', $producto), [
+        ...$data, 'nombre_producto' => 'Proteína', 'stock_actual' => 999,
+    ])->assertRedirectToRoute('productos.index');
+    expect($producto->fresh()->stock_actual)->toBe(5);
+    expect($producto->fresh()->nombre_producto)->toBe('Proteína');
+
+    $this->delete(route('productos.destroy', $producto))->assertRedirectToRoute('productos.index');
+    $this->assertModelMissing($producto);
+});
+
+test('products with sales or inventory history cannot be deleted', function (string $relatedClass) {
+    $producto = Producto::factory()->create();
+    $relatedClass::factory()->for($producto, 'producto')->create();
+
+    $this->delete(route('productos.destroy', $producto))->assertSessionHasErrors([
+        'producto' => 'No se puede eliminar un producto con ventas o movimientos de inventario.',
+    ]);
+    $this->assertModelExists($producto);
+})->with([
+    'ventas' => [DetalleVenta::class],
+    'inventario' => [MovimientoInventario::class],
+]);
+
+test('employees accept legacy boolean values and enforce unique identity on update', function () {
+    $data = ['nombres' => 'Ana', 'documento_identidad' => '00123456', 'es_eventual' => 'true'];
+    $this->post(route('empleados.store'), $data)->assertRedirectToRoute('empleados.index');
+    $empleado = Empleado::sole();
+    expect($empleado->es_eventual)->toBeTrue();
+
+    $this->put(route('empleados.update', $empleado), [...$data, 'es_eventual' => 'false'])
+        ->assertRedirectToRoute('empleados.index');
+    expect($empleado->fresh()->es_eventual)->toBeFalse();
+
+    $other = Empleado::factory()->create();
+    $this->put(route('empleados.update', $other), $data)->assertSessionHasErrors('documento_identidad');
+    expect($other->fresh()->documento_identidad)->toBe($other->documento_identidad);
+
+    $this->delete(route('empleados.destroy', $empleado))->assertRedirectToRoute('empleados.index');
+    $this->assertModelMissing($empleado);
+});
+
+test('supplier CRUD and purchase prices respect both pivot keys', function () {
+    $this->post(route('proveedores.store'), ['nombre_empresa' => 'Proveedor A'])
+        ->assertRedirectToRoute('proveedores.index');
+    $proveedor = Proveedor::sole();
+    $producto = Producto::factory()->create();
+    $data = ['id_producto' => $producto->getKey(), 'id_proveedor' => $proveedor->getKey(), 'precio_compra' => '8.25'];
+    $this->post(route('proveedores.precios.store'), $data)->assertRedirectToRoute('proveedores.index');
+    $this->assertDatabaseHas('producto_proveedor', $data);
+    $this->post(route('proveedores.precios.store'), $data)->assertSessionHasErrors([
+        'id_producto' => 'Este producto ya tiene un precio registrado para este proveedor.',
+    ]);
+    $other = ProductoProveedor::factory()->for($producto, 'producto')->create(['precio_compra' => '7.00']);
+
+    $this->put(route('proveedores.precios.update', [$proveedor, $producto]), ['precio_compra' => '9.50'])
+        ->assertRedirectToRoute('proveedores.index');
+    $this->assertDatabaseHas('producto_proveedor', [...$data, 'precio_compra' => '9.50']);
+    expect($other->fresh()->precio_compra)->toBe('7.00');
+
+    $this->delete(route('proveedores.precios.destroy', [$proveedor, $producto]))
+        ->assertRedirectToRoute('proveedores.index');
+    $this->assertDatabaseMissing('producto_proveedor', ['id_producto' => $producto->getKey(), 'id_proveedor' => $proveedor->getKey()]);
+    $this->put(route('proveedores.update', $proveedor), ['nombre_empresa' => 'Proveedor B'])
+        ->assertRedirectToRoute('proveedores.index');
+    expect($proveedor->fresh()->nombre_empresa)->toBe('Proveedor B');
+    $this->delete(route('proveedores.destroy', $proveedor))->assertRedirectToRoute('proveedores.index');
+    $this->assertModelMissing($proveedor);
+});
+
+test('a supplier cannot update a product price belonging to another supplier', function () {
+    $precio = ProductoProveedor::factory()->create();
+    $other = Proveedor::factory()->create();
+
+    $this->put(route('proveedores.precios.update', [$other, $precio->producto]), ['precio_compra' => '1.00'])
+        ->assertNotFound();
+    expect($precio->fresh()->precio_compra)->toBe($precio->precio_compra);
+});
+
+test('restocking adds stock and an inventory entry together', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 3]);
+
+    $this->post(route('inventario.aumentar'), ['id_producto' => $producto->getKey(), 'cantidad' => 4])
+        ->assertRedirectToRoute('inventario.index');
+
+    expect($producto->fresh()->stock_actual)->toBe(7);
+    $this->assertDatabaseHas('movimiento_inventario', [
+        'id_producto' => $producto->getKey(), 'cantidad' => 4,
+        'tipo_movimiento' => 'ENTRADA', 'motivo' => 'Reabastecimiento',
+    ]);
+});
+
+test('restocking rejects integer overflow without a movement', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 2147483647]);
+
+    $this->post(route('inventario.aumentar'), ['id_producto' => $producto->getKey(), 'cantidad' => 1])
+        ->assertSessionHasErrors(['cantidad' => 'El stock excede el límite permitido.']);
+    expect($producto->fresh()->stock_actual)->toBe(2147483647);
+    $this->assertDatabaseEmpty('movimiento_inventario');
+});
+
+test('cart operations accumulate quantities and reject stock overflow', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 5, 'precio_venta' => '1.25']);
+    $data = ['id_producto' => $producto->getKey(), 'cantidad' => 2];
+    $this->post(route('ventas.carrito.agregar'), [...$data, 'precio_unitario' => 0])->assertRedirectToRoute('ventas.index');
+    $this->post(route('ventas.carrito.agregar'), $data)->assertSessionHas('carrito.'.$producto->getKey().'.cantidad', 4);
+    $this->post(route('ventas.carrito.agregar'), $data)->assertSessionHasErrors([
+        'cantidad' => 'La cantidad solicitada supera el stock disponible.',
+    ]);
+    expect(session('carrito.'.$producto->getKey().'.precio_unitario'))->toBe('1.25');
+
+    $this->delete(route('ventas.carrito.eliminar', $producto))->assertRedirectToRoute('ventas.index')
+        ->assertSessionMissing('carrito.'.$producto->getKey());
+    $this->post(route('ventas.carrito.agregar'), $data);
+    $this->delete(route('ventas.carrito.vaciar'))->assertSessionHas('carrito', []);
+    expect($producto->fresh()->stock_actual)->toBe(5);
+});
+
+test('checkout uses current product prices records details and stock exits then clears the cart', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 5, 'precio_venta' => '0.10']);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 3]);
+    $producto->update(['precio_venta' => '0.20']);
+
+    $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Yape', 'total_venta' => 1])
+        ->assertRedirectToRoute('ventas.index')->assertSessionHas('carrito', []);
+
+    $venta = Venta::sole();
+    expect($venta->total_venta)->toBe('0.60');
+    expect($producto->fresh()->stock_actual)->toBe(2);
+    $this->assertDatabaseHas('detalle_venta', [
+        'id_venta' => $venta->getKey(), 'id_producto' => $producto->getKey(), 'cantidad' => 3, 'precio_unitario' => '0.20',
+    ]);
+    $this->assertDatabaseHas('movimiento_inventario', [
+        'id_producto' => $producto->getKey(), 'cantidad' => 3, 'tipo_movimiento' => 'SALIDA', 'motivo' => 'Venta #'.$venta->getKey(),
+    ]);
+    expect(session('venta_exitosa'))->toBe($venta->getKey());
+
+    $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Yape'])
+        ->assertSessionHasErrors(['carrito' => 'El carrito está vacío.']);
+    $this->assertDatabaseCount('venta', 1);
+});
+
+test('checkout rolls back all lines when a later product is out of stock or removed', function (bool $removed) {
+    $first = Producto::factory()->create(['stock_actual' => 5]);
+    $second = Producto::factory()->create(['stock_actual' => 5]);
+    foreach ([$first, $second] as $producto) {
+        $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 2]);
+    }
+    if ($removed) {
+        $second->delete();
+    } else {
+        $second->update(['stock_actual' => 1]);
+    }
+
+    $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Efectivo'])
+        ->assertSessionHasErrors(['carrito' => 'Un producto ya no está disponible o no tiene stock suficiente.'])
+        ->assertSessionHas('carrito.'.$first->getKey().'.cantidad', 2);
+
+    expect($first->fresh()->stock_actual)->toBe(5);
+    $this->assertDatabaseEmpty('venta');
+    $this->assertDatabaseEmpty('detalle_venta');
+    $this->assertDatabaseEmpty('movimiento_inventario');
+})->with([false, true]);
+
+test('checkout rejects a total beyond the decimal column capacity', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 2, 'precio_venta' => '99999999.99']);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 2]);
+
+    $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Tarjeta'])->assertSessionHasErrors('carrito');
+
+    expect($producto->fresh()->stock_actual)->toBe(2);
+    $this->assertDatabaseEmpty('venta');
+    $this->assertDatabaseEmpty('detalle_venta');
+});
+
+test('checkout rejects negative prices inherited from legacy data', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 2, 'precio_venta' => '-0.50']);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 1]);
+
+    $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Efectivo'])->assertSessionHasErrors('carrito');
+
+    expect($producto->fresh()->stock_actual)->toBe(2);
+    $this->assertDatabaseEmpty('venta');
+    $this->assertDatabaseEmpty('detalle_venta');
+    $this->assertDatabaseEmpty('movimiento_inventario');
+});
+
+test('stock operations reject non-positive and fractional quantities', function (string $routeName, mixed $quantity) {
+    $producto = Producto::factory()->create(['stock_actual' => 5]);
+
+    $this->post(route($routeName), ['id_producto' => $producto->getKey(), 'cantidad' => $quantity])
+        ->assertSessionHasErrors('cantidad');
+
+    expect($producto->fresh()->stock_actual)->toBe(5);
+    $this->assertDatabaseEmpty('movimiento_inventario');
+})->with(['inventario.aumentar', 'ventas.carrito.agregar'])->with([0, -1, 1.5]);
+
+test('manual attendance rejects duplicate dates and invalid time order', function () {
+    $empleado = Empleado::factory()->create();
+    $data = ['id_empleado' => $empleado->getKey(), 'fecha' => '2026-09-25', 'hora_ingreso' => '08:00', 'hora_salida' => '17:00'];
+    $this->post(route('asistencia.store'), $data)->assertRedirectToRoute('asistencia.index');
+    $asistencia = Asistencia::sole();
+    $this->post(route('asistencia.store'), $data)->assertSessionHasErrors([
+        'fecha' => 'El empleado ya tiene asistencia registrada en esta fecha.',
+    ]);
+    $this->put(route('asistencia.update', $asistencia), [...$data, 'hora_salida' => '07:00'])
+        ->assertSessionHasErrors('hora_salida');
+    $this->put(route('asistencia.update', $asistencia), [...$data, 'hora_salida' => '18:00'])
+        ->assertRedirectToRoute('asistencia.index');
+    expect($asistencia->fresh()->hora_salida)->toBe('18:00');
+
+    $this->delete(route('asistencia.destroy', $asistencia))->assertRedirectToRoute('asistencia.index');
+    $this->assertModelMissing($asistencia);
+});
+
+test('clock in and out require an open attendance and allow a later shift', function () {
+    $this->travelTo(now()->setDate(2026, 9, 25)->setTime(8, 0));
+    $empleado = Empleado::factory()->create();
+    $data = ['id_empleado' => $empleado->getKey()];
+    $this->post(route('asistencia.salida'), $data)->assertSessionHasErrors([
+        'id_empleado' => 'Este empleado no tiene un ingreso abierto para registrar la salida.',
+    ]);
+    $this->post(route('asistencia.ingreso'), $data)->assertRedirectToRoute('asistencia.index');
+    $this->post(route('asistencia.ingreso'), $data)->assertSessionHasErrors([
+        'id_empleado' => 'Este empleado ya tiene un ingreso abierto.',
+    ]);
+    $this->travel(4)->hours();
+    $this->post(route('asistencia.salida'), $data)->assertRedirectToRoute('asistencia.index');
+    $this->assertDatabaseHas('asistencia', [
+        'id_empleado' => $empleado->getKey(),
+        'hora_ingreso' => '08:00:00', 'hora_salida' => '12:00:00',
+    ]);
+    expect(Asistencia::sole()->fecha->toDateString())->toBe('2026-09-25');
+    $this->post(route('asistencia.ingreso'), $data)->assertRedirectToRoute('asistencia.index');
+    $this->assertDatabaseCount('asistencia', 2);
+});
+
+test('dashboard totals distinguish current previous and future months and per-product stock limits', function () {
+    $this->travelTo(now()->setDate(2026, 9, 25));
+    $producto = Producto::factory()->create(['stock_actual' => 12, 'stock_minimo_alerta' => 15]);
+    Producto::factory()->create(['stock_actual' => 6, 'stock_minimo_alerta' => 5]);
+    $actual = Venta::factory()->create(['fecha_hora' => '2026-09-01 00:00:00', 'total_venta' => '30.00', 'metodo_pago' => 'Yape']);
+    DetalleVenta::factory()->for($actual, 'venta')->for($producto, 'producto')->create(['cantidad' => 3]);
+    Venta::factory()->create(['fecha_hora' => '2026-08-31 23:59:59', 'total_venta' => '20.00']);
+    Venta::factory()->create(['fecha_hora' => '2026-10-01 00:00:00', 'total_venta' => '500.00']);
+
+    $response = $this->get(route('dashboard.index'))->assertOk();
+
+    expect($response['resumen'])->toEqual(['cantidad_ventas' => 1, 'ingresos' => 30]);
+    expect($response['productosVendidos'])->toBe(['productos_vendidos' => 3]);
+    expect($response['variacionVentas']['variacion'])->toEqual(50);
+    expect($response['productoMasVendido']->getKey())->toBe($producto->getKey());
+    expect($response['cantidadProductosStockBajo'])->toBe(1);
+    expect($response['ventasPorMetodo']->first()['porcentaje'])->toEqual(100);
+    expect($response['ventasPorMes']->pluck('mes')->all())->toBe(['2026-08', '2026-09', '2026-10']);
+});
+
+test('PDF download renders actual sale details and escapes free text in its template', function () {
+    $venta = Venta::factory()->create(['cliente_nombre' => '<script>alert(1)</script>', 'total_venta' => '25.00']);
+    $detalle = DetalleVenta::factory()->for($venta, 'venta')->create(['cantidad' => 2, 'precio_unitario' => '12.50']);
+    $venta->load('detalles.producto');
+
+    $html = view('ventas.factura', ['venta' => $venta, 'detalles' => $venta->detalles])->render();
+    expect($html)->toContain('&lt;script&gt;')->not->toContain('<script>alert(1)</script>');
+    expect($html)->toContain(e($detalle->producto->nombre_producto), '25.00');
+    $response = $this->get(route('ventas.pdf', $venta))->assertOk()->assertHeader('Content-Type', 'application/pdf')
+        ->assertDownload('Recibo_Venta_'.$venta->getKey().'.pdf');
+    expect($response->getContent())->toStartWith('%PDF-');
+});
+
+test('missing legacy records return 404', function (string $routeName) {
+    $this->get(route($routeName, 999999))->assertNotFound();
+})->with(['productos.edit', 'empleados.edit', 'asistencia.edit', 'ventas.show', 'ventas.pdf']);
+
+test('write endpoints reject missing required input without creating records', function (string $routeName, array $errors, string $table) {
+    $this->post(route($routeName), [])->assertSessionHasErrors($errors);
+    $this->assertDatabaseEmpty($table);
+})->with([
+    ['productos.store', ['nombre_producto', 'stock_actual', 'stock_minimo_alerta', 'precio_venta'], 'producto'],
+    ['empleados.store', ['nombres', 'documento_identidad'], 'empleado'],
+    ['proveedores.store', ['nombre_empresa'], 'proveedor'],
+    ['proveedores.precios.store', ['id_producto', 'id_proveedor', 'precio_compra'], 'producto_proveedor'],
+    ['inventario.aumentar', ['id_producto', 'cantidad'], 'movimiento_inventario'],
+    ['asistencia.store', ['id_empleado', 'fecha'], 'asistencia'],
+    ['asistencia.ingreso', ['id_empleado'], 'asistencia'],
+    ['asistencia.salida', ['id_empleado'], 'asistencia'],
+    ['ventas.carrito.agregar', ['id_producto', 'cantidad'], 'venta'],
+    ['ventas.confirmar', ['metodo_pago'], 'venta'],
+]);
+
+test('product inputs reject invalid amounts and lengths', function (string $field, mixed $value) {
+    $data = Producto::factory()->raw();
+
+    $this->post(route('productos.store'), [...$data, $field => $value])->assertSessionHasErrors($field);
+    $this->assertDatabaseEmpty('producto');
+})->with([
+    ['nombre_producto', str_repeat('a', 151)],
+    ['stock_actual', -1], ['stock_actual', 1.5], ['stock_minimo_alerta', -1],
+    ['precio_venta', -1], ['precio_venta', '1.234'], ['precio_venta', '100000000.00'],
+]);
+
+test('GET cannot execute mutations', function (string $routeName) {
+    $this->get(route($routeName))->assertMethodNotAllowed();
+})->with(['inventario.aumentar', 'asistencia.ingreso', 'asistencia.salida', 'ventas.carrito.vaciar']);
+
+test('checkout rejects unsupported payment methods', function () {
+    $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Bitcoin'])->assertSessionHasErrors('metodo_pago');
+    $this->assertDatabaseEmpty('venta');
+});
+
+test('inventory write failures roll back stock and sale records while preserving the cart', function (bool $checkout) {
+    $producto = Producto::factory()->create(['stock_actual' => 5]);
+    if ($checkout) {
+        $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 2]);
+    }
+    $dispatcher = MovimientoInventario::getEventDispatcher();
+    MovimientoInventario::setEventDispatcher(clone $dispatcher);
+    MovimientoInventario::creating(function (): void {
+        throw new RuntimeException('Inventory write failed');
+    });
+    $this->withoutExceptionHandling();
+
+    try {
+        expect(fn () => $this->post(
+            route($checkout ? 'ventas.confirmar' : 'inventario.aumentar'),
+            $checkout ? ['metodo_pago' => 'Efectivo'] : ['id_producto' => $producto->getKey(), 'cantidad' => 2],
+        ))->toThrow(RuntimeException::class, 'Inventory write failed');
+
+        expect($producto->fresh()->stock_actual)->toBe(5);
+        $this->assertDatabaseEmpty('venta');
+        $this->assertDatabaseEmpty('detalle_venta');
+        $this->assertDatabaseEmpty('movimiento_inventario');
+        if ($checkout) {
+            expect(session('carrito.'.$producto->getKey().'.cantidad'))->toBe(2);
+        }
+    } finally {
+        MovimientoInventario::setEventDispatcher($dispatcher);
+    }
+})->with(['restocking' => false, 'checkout' => true]);
+
+test('populated module views render relations escape names and include protected forms', function () {
+    $nombre = '<b>Proteína & energía</b>';
+    $producto = Producto::factory()->create(['nombre_producto' => $nombre, 'stock_actual' => 5]);
+    ProductoProveedor::factory()->for($producto, 'producto')->create();
+    MovimientoInventario::factory()->for($producto, 'producto')->create();
+    $empleado = Empleado::factory()->create(['nombres' => '<b>Ana & José</b>']);
+    Asistencia::factory()->for($empleado, 'empleado')->create();
+    $detalle = DetalleVenta::factory()->for($producto, 'producto')->create(['cantidad' => 2, 'precio_unitario' => '12.50']);
+
+    foreach (['productos.index', 'proveedores.index', 'inventario.index'] as $routeName) {
+        $this->get(route($routeName))->assertOk()->assertSee($nombre)->assertDontSee($nombre, false)
+            ->assertSee('name="_token"', false);
+    }
+    foreach (['empleados.index', 'asistencia.index'] as $routeName) {
+        $this->get(route($routeName))->assertOk()->assertSee($empleado->nombres)
+            ->assertDontSee($empleado->nombres, false)->assertSee('value="DELETE"', false);
+    }
+    $this->get(route('productos.edit', $producto))->assertOk()->assertSee('value="PUT"', false);
+    $this->get(route('ventas.show', $detalle->venta))->assertOk()->assertSee($nombre)->assertSee('25.00')
+        ->assertSee(route('ventas.pdf', $detalle->venta));
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 1]);
+    foreach (['ventas.index', 'ventas.nueva'] as $routeName) {
+        $this->get(route($routeName))->assertOk()->assertSee($nombre)->assertSee('Confirmar venta')
+            ->assertSee('value="DELETE"', false)->assertSee('name="_token"', false);
+    }
+});
+
+test('long receipts render all sale lines across multiple pages', function () {
+    $venta = Venta::factory()->create(['cliente_nombre' => 'José Muñoz', 'metodo_pago' => 'Efectivo', 'total_venta' => '1125.00']);
+    $producto = Producto::factory()->create(['nombre_producto' => str_repeat('Proteína y energía ', 7)]);
+    DetalleVenta::factory()->count(45)->for($venta, 'venta')->for($producto, 'producto')
+        ->create(['cantidad' => 2, 'precio_unitario' => '12.50']);
+
+    $response = $this->get(route('ventas.pdf', $venta))->assertOk()->assertHeader('Content-Type', 'application/pdf')
+        ->assertDownload('Recibo_Venta_'.$venta->getKey().'.pdf');
+    expect($response->getContent())->toStartWith('%PDF-');
+    $venta->load('detalles.producto');
+    $pdf = Pdf::loadView('ventas.factura', ['venta' => $venta, 'detalles' => $venta->detalles]);
+    $pdf->render();
+    expect($pdf->getDomPDF()->getCanvas()->get_page_count())->toBeGreaterThan(1);
+});

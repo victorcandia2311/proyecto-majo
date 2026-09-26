@@ -1,0 +1,72 @@
+@extends('layouts.app')
+
+@section('title', 'Asistencia')
+
+@section('content')
+<h1 class="h3">Control de asistencia</h1>
+<p class="text-muted mb-4">Registra asistencias manualmente o marca el ingreso y la salida del día.</p>
+<div class="card mb-4">
+    <div class="card-header"><h2 class="h6 mb-0">Registrar asistencia</h2></div>
+    <div class="card-body">
+        <form action="{{ route('asistencia.store') }}" method="POST">
+            @csrf
+            @include('asistencia._form', ['asistencia' => null, 'empleados' => $empleados])
+        </form>
+    </div>
+</div>
+<div class="card mb-4">
+    <div class="card-header"><h2 class="h6 mb-0">Marcar ingreso o salida</h2></div>
+    <div class="card-body">
+        <form action="{{ route('asistencia.ingreso') }}" method="POST" class="row g-3 align-items-end">
+            @csrf
+            <div class="col-md-6">
+                <label for="marcacion-empleado" class="form-label">Empleado</label>
+                <select name="id_empleado" id="marcacion-empleado" class="form-select" required>
+                    <option value="">Seleccione un empleado</option>
+                    @foreach ($empleados as $empleado)
+                        <option value="{{ $empleado->id_empleado }}" @selected(old('id_empleado') == $empleado->id_empleado)>{{ $empleado->nombres }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-6 d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-success" @disabled($empleados->isEmpty())>Registrar ingreso</button>
+                <button type="submit" formaction="{{ route('asistencia.salida') }}" class="btn btn-primary" @disabled($empleados->isEmpty())>Registrar salida</button>
+            </div>
+        </form>
+        @if ($empleados->isEmpty())
+            <p class="text-muted mt-3 mb-0">
+                @if (auth()->user()->isAdmin())
+                    Primero <a href="{{ route('empleados.index') }}">registra un empleado</a>.
+                @else
+                    Solicita al administrador que registre un empleado.
+                @endif
+            </p>
+        @endif
+    </div>
+</div>
+<div class="card">
+    <div class="card-header"><h2 class="h6 mb-0">Asistencias registradas</h2></div>
+    <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
+        <thead class="table-dark"><tr><th>ID</th><th>Empleado</th><th>Documento</th><th>Fecha</th><th>Ingreso</th><th>Salida</th><th>Acciones</th></tr></thead>
+        <tbody>
+            @forelse ($asistencias as $asistencia)
+                <tr>
+                    <td>{{ $asistencia->id_asistencia }}</td><td>{{ $asistencia->empleado->nombres }}</td>
+                    <td>{{ $asistencia->empleado->documento_identidad }}</td><td class="text-nowrap">{{ $asistencia->fecha->format('d/m/Y') }}</td>
+                    <td>{{ $asistencia->hora_ingreso ?? '—' }}</td><td>{{ $asistencia->hora_salida ?? '—' }}</td>
+                    <td><div class="action-buttons">
+                        <a href="{{ route('asistencia.edit', $asistencia) }}" class="btn btn-warning btn-sm">Editar</a>
+                        <form action="{{ route('asistencia.destroy', $asistencia) }}" method="POST" data-confirm="¿Eliminar esta asistencia?">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                        </form>
+                    </div></td>
+                </tr>
+            @empty
+                <tr><td colspan="7" class="text-center text-muted py-4">No hay asistencias registradas.</td></tr>
+            @endforelse
+        </tbody>
+    </table></div>
+</div>
+@endsection
