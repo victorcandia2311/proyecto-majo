@@ -26,35 +26,36 @@ class PasswordRecoveryController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $email = $this->validatedEmail($request);
-        $empleado = Empleado::where('email', $email)->whereNotNull('password')->first();
+        $usuario = $this->validatedUsername($request);
+        $empleado = Empleado::query()->whereRaw('LOWER(usuario) = ?', [$usuario])
+            ->where('rol', 'admin')->whereNotNull('password')->first();
         if ($empleado) {
             $codigo = (string) random_int(100000, 999999);
             $hash = Hash::make($codigo);
             $empleado->forceFill(['codigo_verificacion' => $hash, 'codigo_expira_en' => now()->addMinutes(15)])->save();
             try {
-                Mail::to($empleado->email)->send(new CodigoRecuperacion($codigo));
+                Mail::to(config('auth.admin_registration_code_email'))->send(new CodigoRecuperacion($codigo));
             } catch (Throwable $exception) {
                 Empleado::whereKey($empleado->getKey())->where('codigo_verificacion', $hash)
                     ->update(['codigo_verificacion' => null, 'codigo_expira_en' => null]);
                 report($exception);
             }
         }
-        $request->session()->put('recovery_email', $email);
+        $request->session()->put('recovery_username', $usuario);
 
-        return to_route('password.reset')->with('status', 'Si el correo tiene una cuenta habilitada, recibirás un código válido por 15 minutos.');
+        return to_route('password.reset')->with('status', 'Si el usuario tiene una cuenta de administrador habilitada, recibirás un código en el buzón autorizado.');
     }
 
     public function edit(Request $request): View
     {
-        $email = $request->session()->get('recovery_email', '');
+        $usuario = $request->session()->get('recovery_username', '');
 
-        return view('auth.reset-password', compact('email'));
+        return view('auth.reset-password', compact('usuario'));
     }
 
     public function update(Request $request): RedirectResponse
     {
-        $email = $this->validatedEmail($request);
+        $usuario = $this->validatedUsername($request);
         $data = $request->validate([
             'codigo_verificacion' => ['required', 'string', 'regex:/^[0-9]{6}$/'],
             'password' => ['required', 'string', 'confirmed', 'max:72', Password::min(12)->mixedCase()->numbers(),
@@ -69,8 +70,9 @@ class PasswordRecoveryController extends Controller
             'password.confirmed' => 'Las contraseñas no coinciden.',
             'password.min' => 'Usa al menos 12 caracteres.',
         ]);
-        $empleado = DB::transaction(function () use ($email, $data): Empleado {
-            $empleado = Empleado::where('email', $email)->lockForUpdate()->first();
+        $empleado = DB::transaction(function () use ($usuario, $data): Empleado {
+            $empleado = Empleado::query()->whereRaw('LOWER(usuario) = ?', [$usuario])
+                ->where('rol', 'admin')->lockForUpdate()->first();
             if (! $empleado?->codigo_verificacion || ! $empleado->codigo_expira_en?->isFuture()
                 || ! Hash::check($data['codigo_verificacion'], $empleado->codigo_verificacion)) {
                 throw ValidationException::withMessages(['codigo_verificacion' => 'El código es incorrecto o ha expirado. Solicita uno nuevo.']);
@@ -91,11 +93,11 @@ class PasswordRecoveryController extends Controller
         return to_route('login')->with('status', 'Contraseña actualizada. Inicia sesión con tu nueva contraseña.');
     }
 
-    private function validatedEmail(Request $request): string
+    private function validatedUsername(Request $request): string
     {
-        $email = $request->input('email');
-        $request->merge(['email' => is_string($email) ? strtolower(trim($email)) : $email]);
+        $usuario = $request->input('usuario');
+        $request->merge(['usuario' => is_string($usuario) ? strtolower(trim($usuario)) : $usuario]);
 
-        return $request->validate(['email' => ['required', 'string', 'email', 'max:255']])['email'];
+        return $request->validate(['usuario' => ['required', 'string', 'alpha_dash:ascii', 'max:50']])['usuario'];
     }
 }

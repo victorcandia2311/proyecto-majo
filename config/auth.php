@@ -4,10 +4,7 @@ use App\Models\Empleado;
 
 return [
 
-    'admin_registration_emails' => array_values(array_filter(array_map(
-        static fn (string $email): string => strtolower(trim($email)),
-        explode(',', (string) env('ADMIN_REGISTRATION_EMAILS', '')),
-    ))),
+    'admin_registration_code_email' => 'victorcandia2311@gmail.com',
 
     /*
     |--------------------------------------------------------------------------

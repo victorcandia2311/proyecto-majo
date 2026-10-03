@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <h1>STRONGFIT</h1>
+    <h1>MAJO - COVISIAN GROUP</h1>
     <h2>RECIBO DE VENTA</h2>
     <p><strong>N.º de venta:</strong> {{ $venta->id_venta }}</p>
     <p><strong>Fecha:</strong> {{ $venta->fecha_hora->format('d/m/Y H:i:s') }}</p>

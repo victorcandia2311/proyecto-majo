@@ -10,7 +10,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
     <link href="{{ asset('css/auth.css') }}" rel="stylesheet">
-    <script src="{{ asset('js/auth.js') }}" defer></script>
+    <script src="{{ asset('js/auth.js') }}?v={{ filemtime(public_path('js/auth.js')) }}" defer></script>
+    <script src="{{ asset('js/input-limits.js') }}?v={{ filemtime(public_path('js/input-limits.js')) }}" defer></script>
 </head>
 <body class="app-body auth-page">
     <main class="auth-shell">
@@ -39,7 +40,7 @@
                 @endif
                 @yield('content')
             </div>
-            <footer class="auth-footer"><i class="bi bi-shield-lock" aria-hidden="true"></i> Acceso al sistema MAJO</footer>
+            <footer class="auth-footer"><i class="bi bi-shield-lock" aria-hidden="true"></i> MAJO · Versión 1.01</footer>
         </section>
     </main>
 </body>

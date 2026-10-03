@@ -77,7 +77,7 @@
                     </div>
                     <div class="col-md-4">
                         <label for="cliente_documento" class="form-label">Documento</label>
-                        <input type="text" id="cliente_documento" name="cliente_documento" value="{{ old('cliente_documento') }}" maxlength="20" class="form-control" placeholder="DNI / RUC — Opcional">
+                        <input type="text" id="cliente_documento" name="cliente_documento" value="{{ old('cliente_documento') }}" inputmode="numeric" pattern="(?:[0-9]{8}|[0-9]{11})" minlength="8" maxlength="11" data-digits-only class="form-control" placeholder="DNI o RUC, solo números">
                     </div>
                     <div class="col-md-4">
                         <label for="metodo_pago" class="form-label">Método de pago</label>

@@ -12,16 +12,27 @@ class AuthUsersSeeder extends Seeder
     public function run(): void
     {
         foreach ([
-            ['email' => 'admin@majo.com', 'rol' => 'admin', 'nombres' => 'Administrador MAJO', 'documento_identidad' => 'MAJO-ADMIN'],
-            ['email' => 'vendedor@majo.com', 'rol' => 'empleado', 'nombres' => 'Vendedor MAJO', 'documento_identidad' => 'MAJO-VENDEDOR'],
+            ['email' => 'admin@majo.com', 'usuario' => 'admin', 'rol' => 'admin', 'nombres' => 'Administrador MAJO', 'documento_identidad' => 'MAJO-ADMIN'],
+            ['email' => 'vendedor@majo.com', 'usuario' => 'vendedor', 'rol' => 'empleado', 'nombres' => 'Vendedor MAJO', 'documento_identidad' => 'MAJO-VENDEDOR'],
         ] as $data) {
-            if (Empleado::where('email', $data['email'])->exists()) {
+            $existingEmployee = Empleado::where('email', $data['email'])->first();
+            if ($existingEmployee) {
+                if (! $existingEmployee->usuario && ! Empleado::where('usuario', $data['usuario'])->exists()) {
+                    $existingEmployee->forceFill(['usuario' => $data['usuario']])->save();
+                }
+
                 continue;
             }
-            $password = Str::random(20).'aA1!';
+            $password = $data['rol'] === 'admin' ? Str::random(20).'aA1!' : null;
             $empleado = new Empleado;
-            $empleado->forceFill([...$data, 'es_eventual' => false, 'password' => Hash::make($password)])->save();
-            $this->command?->info($data['email'].' — Contraseña inicial: '.$password);
+            $empleado->forceFill([
+                ...$data,
+                'es_eventual' => false,
+                'password' => $password === null ? null : Hash::make($password),
+            ])->save();
+            if ($password !== null) {
+                $this->command?->info('Usuario inicial: '.$data['usuario'].' — Contraseña inicial: '.$password);
+            }
         }
     }
 }

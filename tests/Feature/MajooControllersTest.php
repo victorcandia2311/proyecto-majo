@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\ViewErrorBag;
 
 beforeEach(function () {
     config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:', 'session.block_store' => 'array']);
@@ -153,7 +154,7 @@ test('products with sales or inventory history cannot be deleted', function (str
 ]);
 
 test('employees accept legacy boolean values and enforce unique identity on update', function () {
-    $data = ['nombres' => 'Ana', 'documento_identidad' => '00123456', 'es_eventual' => 'true'];
+    $data = ['nombres' => 'Ana', 'documento_identidad' => '00123456', 'usuario' => 'ana', 'es_eventual' => 'true'];
     $this->post(route('empleados.store'), $data)->assertRedirectToRoute('empleados.index');
     $empleado = Empleado::sole();
     expect($empleado->es_eventual)->toBeTrue();
@@ -168,6 +169,43 @@ test('employees accept legacy boolean values and enforce unique identity on upda
 
     $this->delete(route('empleados.destroy', $empleado))->assertRedirectToRoute('empleados.index');
     $this->assertModelMissing($empleado);
+});
+
+test('employee identity numbers must contain exactly eight digits', function (string $document) {
+    $this->post(route('empleados.store'), [
+        'nombres' => 'Ana', 'documento_identidad' => $document, 'usuario' => 'ana', 'es_eventual' => 'false',
+    ])->assertSessionHasErrors('documento_identidad');
+    $this->assertDatabaseEmpty('empleado');
+})->with(['letters' => '1234ABCD', 'too short' => '1234567', 'too long' => '123456789']);
+
+test('employee username can be created without a seller password', function () {
+    $this->post(route('empleados.store'), [
+        'nombres' => 'Vendedora', 'documento_identidad' => '11111111',
+        'usuario' => 'vendedora_1', 'es_eventual' => 'false',
+    ])->assertRedirectToRoute('empleados.index');
+    $empleado = Empleado::sole();
+    expect($empleado->password)->toBeNull();
+
+    $this->put(route('empleados.update', $empleado), [
+        'nombres' => 'Vendedora', 'documento_identidad' => '11111111',
+        'usuario' => 'vendedora_1', 'es_eventual' => 'false',
+    ])->assertRedirectToRoute('empleados.index');
+    expect($empleado->fresh()->password)->toBeNull();
+});
+
+test('a newly registered employee can sign in using the normalized username from the form', function () {
+    $this->post(route('empleados.store'), [
+        'nombres' => 'Brayan Huaman', 'documento_identidad' => '22222222',
+        'usuario' => '  Brayan  ', 'es_eventual' => 'false',
+    ])->assertRedirectToRoute('empleados.index');
+
+    $empleado = Empleado::where('documento_identidad', '22222222')->sole();
+    expect($empleado->usuario)->toBe('brayan');
+
+    $this->post(route('logout'));
+    $this->post(route('login.seller.store'), ['usuario' => ' BRAYAN '])
+        ->assertRedirectToRoute('ventas.index');
+    $this->assertAuthenticatedAs($empleado);
 });
 
 test('supplier CRUD and purchase prices respect both pivot keys', function () {
@@ -196,6 +234,31 @@ test('supplier CRUD and purchase prices respect both pivot keys', function () {
     expect($proveedor->fresh()->nombre_empresa)->toBe('Proveedor B');
     $this->delete(route('proveedores.destroy', $proveedor))->assertRedirectToRoute('proveedores.index');
     $this->assertModelMissing($proveedor);
+});
+
+test('supplier and sales lists expose search and date filters', function () {
+    $this->get(route('proveedores.index'))->assertOk()
+        ->assertSee('data-live-region="suppliers"', false)
+        ->assertSee('data-live-region="supplier-prices"', false)
+        ->assertSee('data-list-search-input', false);
+
+    Venta::factory()->create(['fecha_hora' => now()]);
+    $this->get(route('ventas.index'))->assertOk()
+        ->assertSee('data-date-filter-start', false)
+        ->assertSee('data-date-filter-end', false)
+        ->assertSee('data-search-date="'.now()->format('Y-m-d').'"', false);
+});
+
+test('checkout accepts only an eight-digit DNI or eleven-digit RUC', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 2]);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 1]);
+
+    $this->post(route('ventas.confirmar'), ['cliente_documento' => '1234ABCD', 'metodo_pago' => 'Efectivo'])
+        ->assertSessionHasErrors('cliente_documento');
+    $this->post(route('ventas.confirmar'), ['cliente_documento' => '12345678', 'metodo_pago' => 'Efectivo'])
+        ->assertRedirectToRoute('ventas.index');
+
+    expect(Venta::sole()->cliente_documento)->toBe('12345678');
 });
 
 test('a supplier cannot update a product price belonging to another supplier', function () {
@@ -385,6 +448,57 @@ test('dashboard totals distinguish current previous and future months and per-pr
     expect($response['ventasPorMes']->pluck('mes')->all())->toBe(['2026-08', '2026-09', '2026-10']);
 });
 
+test('dashboard has no HTML tables and limits the product chart to five items', function () {
+    foreach (range(1, 6) as $quantity) {
+        $producto = Producto::factory()->create();
+        $venta = Venta::factory()->create();
+        DetalleVenta::factory()->for($venta, 'venta')->for($producto, 'producto')->create(['cantidad' => $quantity]);
+    }
+
+    $response = $this->get(route('dashboard.index'))->assertOk()
+        ->assertDontSee('<table', false)
+        ->assertSee('Resumen General')
+        ->assertDontSee('GESTIÓN EMPRESARIAL')
+        ->assertSee('Evolución de Ingresos')
+        ->assertSee('Métodos de Pago')
+        ->assertSee('Top 5 Productos Más Vendidos');
+
+    expect($response['rankingProductos'])->toHaveCount(5);
+});
+
+test('attendance page displays a fallback for a record without a related employee', function () {
+    $asistencia = Asistencia::factory()->make([
+        'id_asistencia' => 999,
+        'id_empleado' => 999,
+        'fecha' => '2026-09-28',
+    ]);
+
+    view()->share('errors', new ViewErrorBag);
+    $html = view('asistencia.index', [
+        'empleados' => collect(),
+        'asistencias' => collect([$asistencia]),
+    ])->render();
+
+    expect($html)->toContain('Empleado eliminado')->toContain('—');
+});
+
+test('live pages expose automatic refresh regions and searchable suggestions', function (string $routeName, string $region, bool $searchable) {
+    $response = $this->get(route($routeName))->assertOk()->assertSee('data-live-lists', false)
+        ->assertSee('data-live-region="'.$region.'"', false);
+
+    if ($searchable) {
+        $response->assertSee('data-list-search-input', false)->assertSee('role="listbox"', false);
+    }
+})->with([
+    ['dashboard.index', 'dashboard-metrics', false],
+    ['productos.index', 'products', true],
+    ['inventario.index', 'inventory-products', true],
+    ['inventario.index', 'inventory-movements', true],
+    ['ventas.index', 'sales', true],
+    ['empleados.index', 'employees', true],
+    ['asistencia.index', 'attendance', true],
+]);
+
 test('PDF download renders actual sale details and escapes free text in its template', function () {
     $venta = Venta::factory()->create(['cliente_nombre' => '<script>alert(1)</script>', 'total_venta' => '25.00']);
     $detalle = DetalleVenta::factory()->for($venta, 'venta')->create(['cantidad' => 2, 'precio_unitario' => '12.50']);
@@ -407,7 +521,7 @@ test('write endpoints reject missing required input without creating records', f
     $this->assertDatabaseEmpty($table);
 })->with([
     ['productos.store', ['nombre_producto', 'stock_actual', 'stock_minimo_alerta', 'precio_venta'], 'producto'],
-    ['empleados.store', ['nombres', 'documento_identidad'], 'empleado'],
+    ['empleados.store', ['nombres', 'documento_identidad', 'usuario'], 'empleado'],
     ['proveedores.store', ['nombre_empresa'], 'proveedor'],
     ['proveedores.precios.store', ['id_producto', 'id_proveedor', 'precio_compra'], 'producto_proveedor'],
     ['inventario.aumentar', ['id_producto', 'cantidad'], 'movimiento_inventario'],

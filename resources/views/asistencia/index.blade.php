@@ -44,15 +44,23 @@
         @endif
     </div>
 </div>
-<div class="card">
-    <div class="card-header"><h2 class="h6 mb-0">Asistencias registradas</h2></div>
+<div class="card" data-live-region="attendance">
+    <div class="card-header list-card-header">
+        <h2 class="h6 mb-0">Asistencias registradas</h2>
+        <div class="list-search-wrap" data-list-search>
+            <label class="visually-hidden" for="filter-attendance">Buscar asistencias</label>
+            <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-attendance" type="search" placeholder="Buscar por empleado o fecha..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-attendance" data-list-search-input></div>
+            <ul class="list-search-suggestions" id="suggestions-attendance" role="listbox" hidden></ul>
+            <span class="list-search-count" data-search-count></span>
+        </div>
+    </div>
     <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
         <thead class="table-dark"><tr><th>ID</th><th>Empleado</th><th>Documento</th><th>Fecha</th><th>Ingreso</th><th>Salida</th><th>Acciones</th></tr></thead>
         <tbody>
             @forelse ($asistencias as $asistencia)
-                <tr>
-                    <td>{{ $asistencia->id_asistencia }}</td><td>{{ $asistencia->empleado->nombres }}</td>
-                    <td>{{ $asistencia->empleado->documento_identidad }}</td><td class="text-nowrap">{{ $asistencia->fecha->format('d/m/Y') }}</td>
+                <tr data-search-row data-search-value="{{ $asistencia->id_asistencia }} {{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }} {{ $asistencia->empleado?->documento_identidad }} {{ $asistencia->fecha->format('d/m/Y') }} {{ $asistencia->hora_ingreso }} {{ $asistencia->hora_salida }}" data-suggestion-label="{{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }} · {{ $asistencia->fecha->format('d/m/Y') }}">
+                    <td>{{ $asistencia->id_asistencia }}</td><td>{{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }}</td>
+                    <td>{{ $asistencia->empleado?->documento_identidad ?? '—' }}</td><td class="text-nowrap">{{ $asistencia->fecha->format('d/m/Y') }}</td>
                     <td>{{ $asistencia->hora_ingreso ?? '—' }}</td><td>{{ $asistencia->hora_salida ?? '—' }}</td>
                     <td><div class="action-buttons">
                         <a href="{{ route('asistencia.edit', $asistencia) }}" class="btn btn-warning btn-sm">Editar</a>
@@ -66,6 +74,7 @@
             @empty
                 <tr><td colspan="7" class="text-center text-muted py-4">No hay asistencias registradas.</td></tr>
             @endforelse
+            <tr data-search-empty hidden><td colspan="7" class="text-center text-muted py-4">No encontramos asistencias que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>

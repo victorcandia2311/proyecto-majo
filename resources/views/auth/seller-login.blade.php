@@ -8,7 +8,7 @@
         <label for="usuario" class="form-label">Nombre de usuario</label>
         <div class="auth-input">
             <i class="bi bi-person" aria-hidden="true"></i>
-            <input id="usuario" name="usuario" type="text" value="{{ old('usuario') }}" class="form-control" placeholder="usuario" maxlength="50" pattern="[A-Za-z0-9_-]+" autocomplete="username" @error('usuario') aria-invalid="true" @enderror required autofocus>
+            <input id="usuario" name="usuario" type="text" value="{{ old('usuario') }}" class="form-control" placeholder="usuario" maxlength="50" pattern="[A-Za-z0-9_\-]+" autocomplete="username" @error('usuario') aria-invalid="true" @enderror required autofocus>
         </div>
     </div>
     <button class="btn auth-submit w-100" type="submit">Entrar a ventas <i class="bi bi-arrow-right" aria-hidden="true"></i></button>

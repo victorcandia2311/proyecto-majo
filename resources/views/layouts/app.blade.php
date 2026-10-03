@@ -9,11 +9,11 @@
     <link rel="icon" href="{{ asset('favicon.ico') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <link href="{{ asset('assets/css/responsive.css') }}" rel="stylesheet">
+    <link href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" rel="stylesheet">
+    <link href="{{ asset('assets/css/responsive.css') }}?v={{ filemtime(public_path('assets/css/responsive.css')) }}" rel="stylesheet">
     @stack('styles')
 </head>
-<body class="app-body">
+<body class="app-body" @if (request()->routeIs('dashboard.index', 'productos.index', 'inventario.index', 'ventas.index', 'empleados.index', 'proveedores.index', 'asistencia.index')) data-live-lists @endif>
     <a class="skip-link" href="#contenido">Saltar al contenido</a>
     <div class="app-wrapper">
         <header class="main-header">
@@ -71,12 +71,14 @@
         </aside>
         <div class="sidebar-overlay" data-sidebar-close aria-hidden="true"></div>
         <main class="main-content" id="contenido" tabindex="-1">
-            <div class="content-header">
-                <div class="content-header-inner">
-                    <span class="content-kicker">GESTIÓN EMPRESARIAL</span>
-                    <span class="content-path"><i class="bi bi-house-door" aria-hidden="true"></i> / @yield('title', 'Panel')</span>
+            @unless (request()->routeIs('dashboard.index'))
+                <div class="content-header">
+                    <div class="content-header-inner">
+                        <span class="content-kicker">GESTIÓN EMPRESARIAL</span>
+                        <span class="content-path"><i class="bi bi-house-door" aria-hidden="true"></i> / @yield('title', 'Panel')</span>
+                    </div>
                 </div>
-            </div>
+            @endunless
             <div class="content-body">
                 @if ($errors->any())
                     <div class="alert alert-danger" role="alert">
@@ -101,11 +103,15 @@
                 @endif
                 @yield('content')
             </div>
-            <footer class="app-footer">MAJO · Sistema de inventario y ventas</footer>
+            <footer class="app-footer">MAJO · Sistema de inventario y ventas · Versión 1.01</footer>
         </main>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
-    <script src="{{ asset('js/app.js') }}" defer></script>
+    <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}" defer></script>
+    <script src="{{ asset('js/input-limits.js') }}?v={{ filemtime(public_path('js/input-limits.js')) }}" defer></script>
+    @if (request()->routeIs('dashboard.index', 'productos.index', 'inventario.index', 'ventas.index', 'empleados.index', 'proveedores.index', 'asistencia.index'))
+        <script src="{{ asset('js/live-lists.js') }}?v={{ filemtime(public_path('js/live-lists.js')) }}" defer></script>
+    @endif
     @stack('scripts')
 </body>
 </html>

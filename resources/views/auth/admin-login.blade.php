@@ -1,14 +1,14 @@
 @extends('layouts.guest')
 @section('title', 'Acceso de administrador')
 @section('content')
-<p class="auth-description">Ingresa con el correo y la contraseña de tu cuenta administrativa.</p>
+<p class="auth-description">Ingresa con tu usuario y contraseña.</p>
 <form action="{{ route('login.store') }}" method="POST">
     @csrf
     <div class="auth-field">
-        <label for="email" class="form-label">Correo electrónico</label>
+        <label for="usuario" class="form-label">Usuario</label>
         <div class="auth-input">
-            <i class="bi bi-envelope" aria-hidden="true"></i>
-            <input id="email" name="email" type="email" value="{{ old('email') }}" class="form-control" placeholder="nombre@empresa.com" maxlength="255" autocomplete="username" @error('email') aria-invalid="true" @enderror required autofocus>
+            <i class="bi bi-person" aria-hidden="true"></i>
+            <input id="usuario" name="usuario" type="text" value="{{ old('usuario') }}" class="form-control" placeholder="Usuario" maxlength="50" pattern="[A-Za-z0-9_\-]+" autocomplete="username" @error('usuario') aria-invalid="true" @enderror required autofocus>
         </div>
     </div>
     <div class="auth-field">

@@ -25,11 +25,21 @@ class AppServiceProvider extends ServiceProvider
         foreach (['login' => [5, 1, 20], 'recovery-send' => [1, 1, 5], 'recovery-reset' => [5, 15, 20]] as $name => [$attempts, $minutes, $ipAttempts]) {
             RateLimiter::for($name, function (Request $request) use ($attempts, $minutes, $ipAttempts): array {
                 $email = $request->input('email');
-                $key = hash('sha256', is_string($email) ? strtolower(trim($email)) : '');
+                $username = $request->input('usuario');
+                $isRegistrationCodeRequest = $request->routeIs('admin.register.code');
+                $isRegistrationCodeVerification = $request->routeIs('admin.register.code.verify');
+                $identity = $isRegistrationCodeRequest
+                    ? 'registro-envio:'.$request->session()->getId()
+                    : ($isRegistrationCodeVerification
+                        ? 'registro-verificacion:'.hash('sha256', (string) $request->session()->get('admin_registration_code_hash', ''))
+                        : (is_string($username) && $username !== ''
+                            ? 'usuario:'.strtolower(trim($username))
+                            : 'email:'.(is_string($email) ? strtolower(trim($email)) : '')));
+                $key = hash('sha256', $identity);
 
                 return [
                     Limit::perMinute($ipAttempts)->by('ip:'.$request->ip()),
-                    Limit::perMinutes($minutes, $attempts)->by('email:'.$key),
+                    Limit::perMinutes($minutes, $attempts)->by($key),
                 ];
             });
         }

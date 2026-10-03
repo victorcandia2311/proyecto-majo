@@ -31,13 +31,21 @@
         @if ($productos->isEmpty())<p class="text-muted mt-3 mb-0">Primero <a href="{{ route('productos.create') }}">registra un producto</a>.</p>@endif
     </div>
 </div>
-<div class="card mb-4">
-    <div class="card-header"><h2 class="h6 mb-0">Inventario actual</h2></div>
+<div class="card mb-4" data-live-region="inventory-products">
+    <div class="card-header list-card-header">
+        <h2 class="h6 mb-0">Inventario actual</h2>
+        <div class="list-search-wrap" data-list-search>
+            <label class="visually-hidden" for="filter-inventory">Buscar inventario</label>
+            <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-inventory" type="search" placeholder="Buscar productos..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-inventory" data-list-search-input></div>
+            <ul class="list-search-suggestions" id="suggestions-inventory" role="listbox" hidden></ul>
+            <span class="list-search-count" data-search-count></span>
+        </div>
+    </div>
     <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
         <thead class="table-dark"><tr><th>ID</th><th>Producto</th><th>Stock actual</th><th>Stock mínimo</th><th>Precio</th><th>Estado</th></tr></thead>
         <tbody>
             @forelse ($productos as $producto)
-                <tr>
+                <tr data-search-row data-search-value="{{ $producto->id_producto }} {{ $producto->nombre_producto }} {{ $producto->stock_actual }} {{ $producto->stock_minimo_alerta }} {{ $producto->precio_venta }} {{ $producto->stock_actual <= $producto->stock_minimo_alerta ? 'stock bajo' : 'disponible' }}" data-suggestion-label="{{ $producto->nombre_producto }} · Stock {{ $producto->stock_actual }}">
                     <td>{{ $producto->id_producto }}</td><td>{{ $producto->nombre_producto }}</td>
                     <td>{{ $producto->stock_actual }}</td><td>{{ $producto->stock_minimo_alerta }}</td>
                     <td class="text-nowrap">S/ {{ number_format((float) $producto->precio_venta, 2) }}</td>
@@ -46,24 +54,34 @@
             @empty
                 <tr><td colspan="6" class="text-center text-muted py-4">No hay productos registrados.</td></tr>
             @endforelse
+            <tr data-search-empty hidden><td colspan="6" class="text-center text-muted py-4">No encontramos productos que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>
-<div class="card">
-    <div class="card-header"><h2 class="h6 mb-0">Historial de movimientos</h2></div>
+<div class="card" data-live-region="inventory-movements">
+    <div class="card-header list-card-header">
+        <h2 class="h6 mb-0">Historial de movimientos</h2>
+        <div class="list-search-wrap" data-list-search>
+            <label class="visually-hidden" for="filter-movements">Buscar movimientos</label>
+            <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-movements" type="search" placeholder="Buscar movimientos..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-movements" data-list-search-input></div>
+            <ul class="list-search-suggestions" id="suggestions-movements" role="listbox" hidden></ul>
+            <span class="list-search-count" data-search-count></span>
+        </div>
+    </div>
     <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
         <thead class="table-dark"><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
         <tbody>
             @forelse ($movimientos as $movimiento)
-                <tr>
+                <tr data-search-row data-search-value="{{ $movimiento->fecha_hora->format('d/m/Y H:i') }} {{ $movimiento->producto?->nombre_producto }} {{ $movimiento->tipo_movimiento }} {{ $movimiento->cantidad }} {{ $movimiento->motivo }}" data-suggestion-label="{{ $movimiento->producto?->nombre_producto ?? 'Producto eliminado' }} · {{ $movimiento->tipo_movimiento }} {{ $movimiento->cantidad }}">
                     <td class="text-nowrap">{{ $movimiento->fecha_hora->format('d/m/Y H:i') }}</td>
-                    <td>{{ $movimiento->producto->nombre_producto }}</td>
+                    <td>{{ $movimiento->producto?->nombre_producto ?? 'Producto eliminado' }}</td>
                     <td><span class="badge {{ $movimiento->tipo_movimiento === 'ENTRADA' ? 'bg-success' : 'bg-danger' }}">{{ $movimiento->tipo_movimiento }}</span></td>
                     <td>{{ $movimiento->cantidad }}</td><td>{{ $movimiento->motivo ?? '—' }}</td>
                 </tr>
             @empty
                 <tr><td colspan="5" class="text-center text-muted py-4">No existen movimientos registrados.</td></tr>
             @endforelse
+            <tr data-search-empty hidden><td colspan="5" class="text-center text-muted py-4">No encontramos movimientos que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>

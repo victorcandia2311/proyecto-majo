@@ -21,13 +21,21 @@
         </form>
     </div>
 </div>
-<div class="card mb-4">
-    <div class="card-header"><h2 class="h6 mb-0">Proveedores registrados</h2></div>
+<div class="card mb-4" data-live-region="suppliers">
+    <div class="card-header list-card-header">
+        <h2 class="h6 mb-0">Proveedores registrados</h2>
+        <div class="list-search-wrap" data-list-search>
+            <label class="visually-hidden" for="filter-suppliers">Buscar proveedores</label>
+            <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-suppliers" type="search" placeholder="Buscar proveedores..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-suppliers" data-list-search-input></div>
+            <ul class="list-search-suggestions" id="suggestions-suppliers" role="listbox" hidden></ul>
+            <span class="list-search-count" data-search-count></span>
+        </div>
+    </div>
     <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
         <thead class="table-dark"><tr><th>ID</th><th>Empresa</th><th>Acciones</th></tr></thead>
         <tbody>
             @forelse ($proveedores as $proveedor)
-                <tr>
+                <tr data-search-row data-search-value="{{ $proveedor->id_proveedor }} {{ $proveedor->nombre_empresa }}" data-suggestion-label="{{ $proveedor->nombre_empresa }} · #{{ $proveedor->id_proveedor }}">
                     <td>{{ $proveedor->id_proveedor }}</td><td>{{ $proveedor->nombre_empresa }}</td>
                     <td><div class="action-buttons">
                         <form action="{{ route('proveedores.update', $proveedor) }}" method="POST" class="d-flex flex-wrap gap-2">
@@ -48,6 +56,7 @@
             @empty
                 <tr><td colspan="3" class="text-center text-muted py-4">No hay proveedores registrados.</td></tr>
             @endforelse
+            <tr data-search-empty hidden><td colspan="3" class="text-center text-muted py-4">No encontramos proveedores que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>
@@ -55,13 +64,21 @@
     <div class="card-header"><h2 class="h6 mb-0">Registrar precio de proveedor</h2></div>
     <div class="card-body">@include('proveedores._precio-form', compact('productos', 'proveedores'))</div>
 </div>
-<div class="card">
-    <div class="card-header"><h2 class="h6 mb-0">Precios por proveedor</h2></div>
+<div class="card" data-live-region="supplier-prices">
+    <div class="card-header list-card-header">
+        <h2 class="h6 mb-0">Precios por proveedor</h2>
+        <div class="list-search-wrap" data-list-search>
+            <label class="visually-hidden" for="filter-supplier-prices">Buscar precios</label>
+            <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-supplier-prices" type="search" placeholder="Buscar producto o proveedor..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-supplier-prices" data-list-search-input></div>
+            <ul class="list-search-suggestions" id="suggestions-supplier-prices" role="listbox" hidden></ul>
+            <span class="list-search-count" data-search-count></span>
+        </div>
+    </div>
     <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
         <thead class="table-dark"><tr><th>Producto</th><th>Proveedor</th><th>Precio de compra</th><th>Acciones</th></tr></thead>
         <tbody>
             @forelse ($precios as $precio)
-                <tr>
+                <tr data-search-row data-search-value="{{ $precio->producto->nombre_producto }} {{ $precio->proveedor->nombre_empresa }} {{ $precio->precio_compra }}" data-suggestion-label="{{ $precio->producto->nombre_producto }} · {{ $precio->proveedor->nombre_empresa }}">
                     <td>{{ $precio->producto->nombre_producto }}</td><td>{{ $precio->proveedor->nombre_empresa }}</td>
                     <td class="text-nowrap">S/ {{ number_format((float) $precio->precio_compra, 2) }}</td>
                     <td><div class="action-buttons">
@@ -83,6 +100,7 @@
             @empty
                 <tr><td colspan="4" class="text-center text-muted py-4">No hay precios de proveedores registrados.</td></tr>
             @endforelse
+            <tr data-search-empty hidden><td colspan="4" class="text-center text-muted py-4">No encontramos precios que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>

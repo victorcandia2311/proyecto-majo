@@ -78,7 +78,7 @@ class VentaController extends Controller
     {
         $data = $request->validate([
             'cliente_nombre' => ['nullable', 'string', 'max:100'],
-            'cliente_documento' => ['nullable', 'string', 'max:20'],
+            'cliente_documento' => ['nullable', 'regex:/^(?:[0-9]{8}|[0-9]{11})$/'],
             'metodo_pago' => ['required', Rule::in(['Efectivo', 'Yape', 'Plin', 'Tarjeta'])],
         ]);
         $carrito = $request->session()->get('carrito', []);

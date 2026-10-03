@@ -1,124 +1,94 @@
 @extends('layouts.app')
 
-@section('title', 'Dashboard')
+@section('title', 'Resumen General')
 
 @section('content')
-<div class="mb-4"><h1 class="dashboard-title">Dashboard</h1><p class="text-muted mb-0">Resumen general del sistema de inventario.</p></div>
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3"><div class="card dashboard-card h-100"><div class="card-body">
-        <h2 class="h6 text-muted">Ventas del mes</h2><p class="h3 mb-0">{{ $resumen['cantidad_ventas'] }}</p>
-    </div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card dashboard-card h-100"><div class="card-body">
-        <h2 class="h6 text-muted">Ingresos del mes</h2><p class="h3">S/ {{ number_format((float) $resumen['ingresos'], 2) }}</p>
-        <p class="small mb-0 {{ $variacionVentas['variacion'] < 0 ? 'text-danger' : 'text-success' }}">
-            {{ $variacionVentas['variacion'] > 0 ? '+' : '' }}{{ number_format((float) $variacionVentas['variacion'], 2) }}% respecto al mes anterior
-        </p>
-    </div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card dashboard-card h-100"><div class="card-body">
-        <h2 class="h6 text-muted">Productos vendidos del mes</h2><p class="h3 mb-0">{{ $productosVendidos['productos_vendidos'] }}</p>
-    </div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card dashboard-card h-100 border-warning"><div class="card-body">
-        <h2 class="h6 text-muted">Productos con stock bajo</h2><p class="h3">{{ $cantidadProductosStockBajo }}</p>
-        <p class="small mb-0">En el mínimo configurado o por debajo.</p>
-    </div></div></div>
-</div>
-<div class="row g-4 mb-4">
-    <div class="col-lg-6"><div class="card h-100">
-        <div class="card-header"><h2 class="h6 mb-0">Ventas por mes</h2></div>
-        <div class="card-body">
-            @if ($ventasPorMes->isEmpty())
-                <p class="text-muted mb-0">No hay ventas registradas.</p>
-            @else
-                <div class="chart-container"><canvas id="graficoVentas" role="img" aria-label="Ventas mensuales en soles. Valores disponibles en la tabla siguiente."></canvas></div>
-                <details class="mt-3"><summary>Ver datos de ventas mensuales</summary>
-                    <div class="table-responsive mt-2"><table class="table table-sm">
-                        <thead><tr><th>Mes</th><th>Total (S/)</th></tr></thead>
-                        <tbody>@foreach ($ventasPorMes as $mes)<tr><td>{{ $mes['mes'] }}</td><td>{{ number_format((float) $mes['total'], 2) }}</td></tr>@endforeach</tbody>
-                    </table></div>
-                </details>
-            @endif
+<div class="dashboard-page">
+    <header class="dashboard-heading">
+        <div>
+            <p class="dashboard-eyebrow">MAJO <span aria-hidden="true">/</span> INDICADORES</p>
+            <h1>Resumen General</h1>
         </div>
-    </div></div>
-    <div class="col-lg-6"><div class="card h-100">
-        <div class="card-header"><h2 class="h6 mb-0">Productos vendidos por mes</h2></div>
-        <div class="card-body">
-            @if ($productosVendidosPorMes->isEmpty())
-                <p class="text-muted mb-0">No hay productos vendidos.</p>
-            @else
-                <div class="chart-container"><canvas id="graficoProductosVendidos" role="img" aria-label="Unidades vendidas por mes. Valores disponibles en la tabla siguiente."></canvas></div>
-                <details class="mt-3"><summary>Ver unidades por mes</summary>
-                    <div class="table-responsive mt-2"><table class="table table-sm">
-                        <thead><tr><th>Mes</th><th>Unidades</th></tr></thead>
-                        <tbody>@foreach ($productosVendidosPorMes as $mes)<tr><td>{{ $mes['mes'] }}</td><td>{{ $mes['unidades_vendidas'] }}</td></tr>@endforeach</tbody>
-                    </table></div>
-                </details>
-            @endif
+        <div class="dashboard-clock" aria-label="Fecha y hora de Perú">
+            <span class="dashboard-clock-time" id="dashboard-clock-time">--:--:--</span>
+            <time class="dashboard-clock-date" id="dashboard-clock-date">Cargando fecha…</time>
         </div>
-    </div></div>
-</div>
-<div class="row g-4 mb-4">
-    <div class="col-xl-6"><div class="card h-100">
-        <div class="card-header"><h2 class="h6 mb-0">Alerta de stock bajo</h2></div>
-        <div class="table-responsive"><table class="table table-bordered align-middle">
-            <thead class="table-warning"><tr><th>Producto</th><th>Stock actual</th><th>Stock mínimo</th></tr></thead>
-            <tbody>
-                @forelse ($productosStockBajo as $producto)
-                    <tr><td><a href="{{ route('productos.edit', $producto) }}">{{ $producto->nombre_producto }}</a></td><td>{{ $producto->stock_actual }}</td><td>{{ $producto->stock_minimo_alerta }}</td></tr>
-                @empty
-                    <tr><td colspan="3" class="text-center text-muted py-4">No hay productos con stock bajo.</td></tr>
-                @endforelse
-            </tbody>
-        </table></div>
-        <div class="card-body"><a href="{{ route('inventario.index') }}" class="btn btn-outline-primary">Revisar inventario</a></div>
-    </div></div>
-    <div class="col-xl-6"><div class="card h-100">
-        <div class="card-header"><h2 class="h6 mb-0">Ventas por método de pago</h2></div>
-        @if ($ventasPorMetodo->isNotEmpty())
-            <div class="card-body"><div class="chart-container"><canvas id="graficoMetodos" role="img" aria-label="Ventas por método de pago. Valores disponibles en la tabla siguiente."></canvas></div></div>
+    </header>
+
+    <section class="dashboard-metrics" aria-label="Resumen del mes" data-live-region="dashboard-metrics">
+        <article class="metric-card">
+            <div class="metric-card-top"><span>Ingresos del Mes</span><span class="metric-icon metric-icon-indigo" aria-hidden="true">S/</span></div>
+            <p class="metric-value">S/ {{ number_format((float) $resumen['ingresos'], 2) }}</p>
+            <p class="metric-foot {{ $variacionVentas['variacion'] < 0 ? 'is-negative' : 'is-positive' }}">{{ $variacionVentas['variacion'] > 0 ? '+' : '' }}{{ number_format((float) $variacionVentas['variacion'], 1) }}% <span>vs. mes anterior</span></p>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-top"><span>Ventas Realizadas</span><span class="metric-icon metric-icon-blue" aria-hidden="true"><i class="bi bi-receipt"></i></span></div>
+            <p class="metric-value">{{ number_format((int) $resumen['cantidad_ventas']) }}</p>
+            <p class="metric-foot">Durante el mes actual</p>
+        </article>
+        <article class="metric-card">
+            <div class="metric-card-top"><span>Artículos Vendidos</span><span class="metric-icon metric-icon-green" aria-hidden="true"><i class="bi bi-box-seam"></i></span></div>
+            <p class="metric-value">{{ number_format((int) $productosVendidos['productos_vendidos']) }}</p>
+            <p class="metric-foot">Unidades despachadas este mes</p>
+        </article>
+        <a class="metric-card metric-stock {{ $cantidadProductosStockBajo > 0 ? 'has-alerts' : 'no-alerts' }}" href="{{ route('inventario.index') }}">
+            <div class="metric-card-top"><span>Alertas de Stock</span><span class="metric-icon" aria-hidden="true"><i class="bi {{ $cantidadProductosStockBajo > 0 ? 'bi-exclamation-triangle' : 'bi-check-circle' }}"></i></span></div>
+            <p class="metric-value">{{ number_format($cantidadProductosStockBajo) }}</p>
+            <p class="metric-foot">{{ $cantidadProductosStockBajo > 0 ? 'Productos por reponer' : 'Inventario al día' }} <i class="bi bi-arrow-up-right" aria-hidden="true"></i></p>
+        </a>
+    </section>
+
+    <section class="dashboard-charts" aria-label="Gráficos de ventas">
+        <article class="dashboard-panel dashboard-panel-wide">
+            <header class="dashboard-panel-heading">
+                <div><p class="dashboard-panel-kicker">TENDENCIA</p><h2>Evolución de Ingresos</h2></div>
+                <span class="chart-period"><i aria-hidden="true"></i> Historial</span>
+            </header>
+            <p class="chart-demo-note" data-demo-note="income" hidden>Datos ilustrativos: aún no hay ingresos registrados.</p>
+            <div class="dashboard-chart dashboard-chart-main"><canvas id="graficoIngresos" role="img" aria-label="Gráfico de área con la evolución mensual de ingresos en soles"></canvas></div>
+        </article>
+
+        <article class="dashboard-panel">
+            <header class="dashboard-panel-heading">
+                <div><p class="dashboard-panel-kicker">DISTRIBUCIÓN</p><h2>Métodos de Pago</h2></div>
+            </header>
+            <p class="chart-demo-note" data-demo-note="payments" hidden>Datos ilustrativos mientras se registran ventas.</p>
+            <div class="dashboard-chart dashboard-chart-donut"><canvas id="graficoMetodos" role="img" aria-label="Gráfico de anillo con la distribución por método de pago"></canvas></div>
+        </article>
+
+        <article class="dashboard-panel">
+            <header class="dashboard-panel-heading">
+                <div><p class="dashboard-panel-kicker">UNIDADES DEL MES</p><h2>Top 5 Productos Más Vendidos</h2></div>
+            </header>
+            <p class="chart-demo-note" data-demo-note="products" hidden>Datos ilustrativos mientras se registran ventas.</p>
+            <div class="dashboard-chart dashboard-chart-bars"><canvas id="graficoProductos" role="img" aria-label="Gráfico de barras horizontales con los cinco productos más vendidos y sus cantidades"></canvas></div>
+        </article>
+    </section>
+
+    <section class="stock-followup" aria-labelledby="stock-followup-title" data-live-region="dashboard-stock">
+        <div class="stock-followup-heading">
+            <div><p class="dashboard-panel-kicker">INVENTARIO</p><h2 id="stock-followup-title">Productos que requieren reposición</h2></div>
+            <a href="{{ route('inventario.index') }}">Ver inventario <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+        </div>
+        @if ($productosStockBajo->isNotEmpty())
+            <ul class="stock-alert-list">
+                @foreach ($productosStockBajo->take(5) as $producto)
+                    <li><a href="{{ route('productos.edit', $producto) }}"><span>{{ $producto->nombre_producto }}</span><strong>{{ $producto->stock_actual }} <small>en stock</small></strong></a></li>
+                @endforeach
+            </ul>
+        @else
+            <p class="text-muted mb-0">No hay productos con alertas de stock.</p>
         @endif
-        <div class="table-responsive"><table class="table table-bordered align-middle">
-            <thead class="table-dark"><tr><th>Método</th><th>Cantidad</th><th>Total</th><th>Porcentaje</th></tr></thead>
-            <tbody>
-                @forelse ($ventasPorMetodo as $metodo)
-                    <tr><td>{{ $metodo['metodo_pago'] }}</td><td>{{ $metodo['cantidad'] }}</td><td class="text-nowrap">S/ {{ number_format((float) $metodo['total'], 2) }}</td><td>{{ number_format((float) $metodo['porcentaje'], 2) }}%</td></tr>
-                @empty
-                    <tr><td colspan="4" class="text-center text-muted py-4">No hay ventas este mes.</td></tr>
-                @endforelse
-            </tbody>
-        </table></div>
-    </div></div>
-</div>
-<div class="card mb-4"><div class="card-body">
-    <h2 class="h6 text-muted">Producto más vendido del mes</h2>
-    @if ($productoMasVendido)
-        <p class="h4">{{ $productoMasVendido->nombre_producto }}</p><p class="mb-0">{{ $productoMasVendido->cantidad_vendida }} unidades vendidas</p>
-    @else
-        <p class="text-muted mb-0">No hay ventas este mes.</p>
-    @endif
-</div></div>
-<div class="card">
-    <div class="card-header"><h2 class="h6 mb-0">Top 3 productos más vendidos del mes</h2></div>
-    <div class="table-responsive"><table class="table table-hover align-middle">
-        <thead class="table-dark"><tr><th>Puesto</th><th>Producto</th><th>Unidades vendidas</th></tr></thead>
-        <tbody>
-            @forelse ($rankingProductos as $producto)
-                <tr><td>{{ $loop->iteration }}</td><td>{{ $producto->nombre_producto }}</td><td>{{ $producto->cantidad_vendida }}</td></tr>
-            @empty
-                <tr><td colspan="3" class="text-center text-muted py-4">No hay productos vendidos durante este mes.</td></tr>
-            @endforelse
-        </tbody>
-    </table></div>
+    </section>
 </div>
 @endsection
 
 @push('scripts')
-    <script>
-        window.majooDashboard = {
-            ventas: {{ Illuminate\Support\Js::from($ventasPorMes) }},
-            productos: {{ Illuminate\Support\Js::from($productosVendidosPorMes) }},
-            metodos: {{ Illuminate\Support\Js::from($ventasPorMetodo) }}
-        };
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="{{ asset('js/dashboard.js') }}" defer></script>
+    <script id="dashboard-chart-data" type="application/json">{!! Illuminate\Support\Js::encode([
+        'ventas' => $ventasPorMes,
+        'metodos' => $ventasPorMetodo,
+        'ranking' => $rankingProductos->map(fn ($producto): array => ['nombre' => $producto->nombre_producto, 'cantidad' => (int) $producto->cantidad_vendida])->values(),
+    ]) !!}</script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="{{ asset('js/dashboard.js') }}?v={{ filemtime(public_path('js/dashboard.js')) }}" defer></script>
 @endpush

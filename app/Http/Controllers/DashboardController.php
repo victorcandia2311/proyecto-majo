@@ -62,7 +62,7 @@ class DashboardController extends Controller
         );
         $rankingProductos = Producto::whereHas('detallesVenta', $ventasDelMes)
             ->withSum(['detallesVenta as cantidad_vendida' => $ventasDelMes], 'cantidad')
-            ->orderByDesc('cantidad_vendida')->orderBy('id_producto')->limit(3)->get();
+            ->orderByDesc('cantidad_vendida')->orderBy('id_producto')->limit(5)->get();
         $productoMasVendido = $rankingProductos->first();
         $productosStockBajo = Producto::whereColumn('stock_actual', '<=', 'stock_minimo_alerta')
             ->orderBy('stock_actual')->get();

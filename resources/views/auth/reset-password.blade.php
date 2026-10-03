@@ -5,10 +5,10 @@
 <form action="{{ route('password.update') }}" method="POST">
     @csrf
     <div class="auth-field">
-        <label for="email" class="form-label">Correo electrónico</label>
+        <label for="usuario" class="form-label">Usuario de administrador</label>
         <div class="auth-input">
-            <i class="bi bi-envelope" aria-hidden="true"></i>
-            <input id="email" name="email" type="email" value="{{ old('email', $email) }}" class="form-control" placeholder="nombre@empresa.com" maxlength="255" autocomplete="username" required>
+            <i class="bi bi-person" aria-hidden="true"></i>
+            <input id="usuario" name="usuario" type="text" value="{{ old('usuario', $usuario) }}" class="form-control" placeholder="usuario_01" maxlength="50" pattern="[A-Za-z0-9_\-]+" autocomplete="username" required>
         </div>
     </div>
     <div class="auth-field">

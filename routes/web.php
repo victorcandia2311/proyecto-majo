@@ -19,7 +19,9 @@ Route::middleware('guest')->group(function (): void {
     Route::get('login/vendedor', [AuthController::class, 'sellerLogin'])->name('login.seller');
     Route::post('login/vendedor', [AuthController::class, 'storeSeller'])->middleware('throttle:login')->name('login.seller.store');
     Route::get('registro/administrador', [AuthController::class, 'createAdminRegistration'])->name('admin.register');
-    Route::post('registro/administrador', [AuthController::class, 'registerAdmin'])->middleware('throttle:login')->name('admin.register.store');
+    Route::post('registro/administrador/codigo', [AuthController::class, 'sendAdminRegistrationCode'])->middleware('throttle:recovery-send')->name('admin.register.code');
+    Route::post('registro/administrador/codigo/verificar', [AuthController::class, 'verifyAdminRegistrationCode'])->middleware('throttle:recovery-reset')->name('admin.register.code.verify');
+    Route::post('registro/administrador', [AuthController::class, 'registerAdmin'])->middleware('throttle:recovery-reset')->name('admin.register.store');
     Route::get('olvide-mi-contrasena', [PasswordRecoveryController::class, 'create'])->name('password.request');
     Route::post('olvide-mi-contrasena', [PasswordRecoveryController::class, 'store'])->middleware('throttle:recovery-send')->name('password.email');
     Route::get('restablecer-contrasena', [PasswordRecoveryController::class, 'edit'])->name('password.reset');
