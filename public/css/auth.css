@@ -108,3 +108,5 @@ body.auth-page {
     .auth-remember input { appearance: auto; }
     .auth-remember input:checked::after { display: none; }
 }
+
+*:focus-visible { outline: 2px solid #71b7ff; outline-offset: 4px; }
