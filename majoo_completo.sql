@@ -6,12 +6,6 @@ CREATE TABLE "asistencia" (
 	"hora_salida" TIME NULL DEFAULT NULL
 )
 ;
-COMMENT ON COLUMN "asistencia"."id_asistencia" IS '';
-COMMENT ON COLUMN "asistencia"."id_empleado" IS '';
-COMMENT ON COLUMN "asistencia"."fecha" IS '';
-COMMENT ON COLUMN "asistencia"."hora_ingreso" IS '';
-COMMENT ON COLUMN "asistencia"."hora_salida" IS '';
-
 CREATE TABLE "detalle_venta" (
 	"id_detalle" SERIAL NOT NULL,
 	"id_venta" INTEGER NOT NULL,
@@ -20,12 +14,6 @@ CREATE TABLE "detalle_venta" (
 	"precio_unitario" NUMERIC(10,2) NOT NULL
 )
 ;
-COMMENT ON COLUMN "detalle_venta"."id_detalle" IS '';
-COMMENT ON COLUMN "detalle_venta"."id_venta" IS '';
-COMMENT ON COLUMN "detalle_venta"."id_producto" IS '';
-COMMENT ON COLUMN "detalle_venta"."cantidad" IS '';
-COMMENT ON COLUMN "detalle_venta"."precio_unitario" IS '';
-
 CREATE TABLE "empleado" (
 	"id_empleado" SERIAL NOT NULL,
 	"nombres" VARCHAR(100) NOT NULL,
@@ -36,7 +24,9 @@ CREATE TABLE "empleado" (
 	"codigo_expira_en" TIMESTAMP NULL DEFAULT NULL,
 	"remember_token" VARCHAR(100) NULL DEFAULT NULL,
 	"usuario" VARCHAR(50) NULL DEFAULT NULL,
+	"documento_identidad" VARCHAR(20) NULL DEFAULT NULL,
 	UNIQUE "empleado_usuario_unique" ("usuario"),
+	PRIMARY KEY ("id_empleado"),
 	CONSTRAINT "empleado_rol_check" CHECK (((rol)::text = ANY (ARRAY[('admin'::character varying)::text, ('empleado'::character varying)::text])))
 )
 ;
@@ -49,6 +39,25 @@ COMMENT ON COLUMN "empleado"."codigo_verificacion" IS '';
 COMMENT ON COLUMN "empleado"."codigo_expira_en" IS '';
 COMMENT ON COLUMN "empleado"."remember_token" IS '';
 COMMENT ON COLUMN "empleado"."usuario" IS '';
+COMMENT ON COLUMN "empleado"."documento_identidad" IS '';
+
+CREATE TABLE "empleado_temporal" (
+	"id_temporal" SERIAL NOT NULL,
+	"id_empleado" INTEGER NULL,
+	"nombre_temp" VARCHAR(100) NULL,
+	"fecha_inicio" DATE NULL,
+	"fecha_fin" DATE NULL,
+	"agencia_outsourcing" VARCHAR(100) NULL DEFAULT NULL::character varying,
+	"hora_ingreso" TIME NULL,
+	"hora_salida" TIME NULL,
+	PRIMARY KEY ("id_temporal")
+)
+;
+COMMENT ON COLUMN "empleado_temporal"."id_temporal" IS '';
+COMMENT ON COLUMN "empleado_temporal"."id_empleado" IS '';
+COMMENT ON COLUMN "empleado_temporal"."fecha_inicio" IS '';
+COMMENT ON COLUMN "empleado_temporal"."fecha_fin" IS '';
+COMMENT ON COLUMN "empleado_temporal"."agencia_outsourcing" IS '';
 
 CREATE TABLE "migrations" (
 	"id" SERIAL NOT NULL,
@@ -59,6 +68,7 @@ CREATE TABLE "migrations" (
 COMMENT ON COLUMN "migrations"."id" IS '';
 COMMENT ON COLUMN "migrations"."migration" IS '';
 COMMENT ON COLUMN "migrations"."batch" IS '';
+
 
 CREATE TABLE "movimiento_inventario" (
 	"id_movimiento" SERIAL NOT NULL,
@@ -77,6 +87,7 @@ COMMENT ON COLUMN "movimiento_inventario"."tipo_movimiento" IS '';
 COMMENT ON COLUMN "movimiento_inventario"."cantidad" IS '';
 COMMENT ON COLUMN "movimiento_inventario"."motivo" IS '';
 COMMENT ON COLUMN "movimiento_inventario"."fecha_hora" IS '';
+
 
 CREATE TABLE "producto" (
 	"id_producto" SERIAL NOT NULL,
@@ -102,14 +113,6 @@ COMMENT ON COLUMN "producto_proveedor"."id_producto" IS '';
 COMMENT ON COLUMN "producto_proveedor"."id_proveedor" IS '';
 COMMENT ON COLUMN "producto_proveedor"."precio_compra" IS '';
 
-CREATE TABLE "proveedor" (
-	"id_proveedor" SERIAL NOT NULL,
-	"nombre_empresa" VARCHAR(100) NOT NULL
-)
-;
-COMMENT ON COLUMN "proveedor"."id_proveedor" IS '';
-COMMENT ON COLUMN "proveedor"."nombre_empresa" IS '';
-
 CREATE TABLE "venta" (
 	"id_venta" SERIAL NOT NULL,
 	"fecha_hora" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -125,3 +128,10 @@ COMMENT ON COLUMN "venta"."cliente_nombre" IS '';
 COMMENT ON COLUMN "venta"."cliente_documento" IS '';
 COMMENT ON COLUMN "venta"."metodo_pago" IS '';
 COMMENT ON COLUMN "venta"."total_venta" IS '';
+
+CREATE TEMP TABLE ventas_generadas (
+    id_venta INTEGER,
+    documento VARCHAR(20),
+    id_producto INTEGER,
+    cantidad INTEGER
+);

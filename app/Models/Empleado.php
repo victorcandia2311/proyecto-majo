@@ -44,6 +44,11 @@ class Empleado extends Authenticatable
         return $this->hasMany(Asistencia::class, 'id_empleado', 'id_empleado');
     }
 
+    public function periodosTemporales(): HasMany
+    {
+        return $this->hasMany(EmpleadoTemporal::class, 'id_empleado', 'id_empleado');
+    }
+
     public function isAdmin(): bool
     {
         return $this->rol === 'admin';

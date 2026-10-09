@@ -34,7 +34,7 @@
         <tbody>
             @foreach ($detalles as $detalle)
                 <tr>
-                    <td>{{ $detalle->producto->nombre_producto }}</td>
+                    <td>{{ $detalle->producto?->nombre_producto ?? 'Producto eliminado' }}</td>
                     <td class="number">{{ $detalle->cantidad }}</td>
                     <td class="number">S/ {{ number_format((float) $detalle->precio_unitario, 2) }}</td>
                     <td class="number">S/ {{ number_format($detalle->cantidad * (float) $detalle->precio_unitario, 2) }}</td>

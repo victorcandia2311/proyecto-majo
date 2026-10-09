@@ -6,7 +6,6 @@ use App\Http\Requests\ProductoRequest;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class ProductoController extends Controller
@@ -46,16 +45,9 @@ class ProductoController extends Controller
     {
         DB::transaction(function () use ($producto): void {
             $producto = Producto::lockForUpdate()->findOrFail($producto->getKey());
-
-            if ($producto->detallesVenta()->exists() || $producto->movimientosInventario()->exists()) {
-                throw ValidationException::withMessages([
-                    'producto' => 'No se puede eliminar un producto con ventas o movimientos de inventario.',
-                ]);
-            }
-
             $producto->delete();
         });
 
-        return to_route('productos.index');
+        return to_route('productos.index')->with('mensaje', 'producto_eliminado');
     }
 }

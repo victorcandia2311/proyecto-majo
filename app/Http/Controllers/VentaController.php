@@ -18,12 +18,32 @@ class VentaController extends Controller
 {
     public function index(Request $request): View
     {
+        $filtros = $request->validate([
+            'fecha_desde' => ['nullable', 'date_format:Y-m-d'],
+            'fecha_hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:fecha_desde'],
+        ]);
         $productos = Producto::where('stock_actual', '>', 0)->orderBy('nombre_producto')->get();
-        $ventas = Venta::orderByDesc('fecha_hora')->get();
+        $fechaDesde = $filtros['fecha_desde'] ?? null;
+        $fechaHasta = $filtros['fecha_hasta'] ?? null;
+        $ventasQuery = Venta::query()
+            ->when($fechaDesde, fn ($query) => $query->whereDate('fecha_hora', '>=', $fechaDesde))
+            ->when($fechaHasta, fn ($query) => $query->whereDate('fecha_hora', '<=', $fechaHasta));
+        $filtrandoPorFecha = $fechaDesde !== null || $fechaHasta !== null;
+        $totalVentasFiltradas = $filtrandoPorFecha ? (clone $ventasQuery)->sum('total_venta') : null;
+        $ventas = $ventasQuery->orderByDesc('fecha_hora')->paginate(30)->withQueryString();
         $carrito = $request->session()->get('carrito', []);
         $totalCarrito = collect($carrito)->sum(fn (array $item): float => $item['cantidad'] * (float) $item['precio_unitario']);
 
-        return view('ventas.index', compact('productos', 'ventas', 'carrito', 'totalCarrito'));
+        return view('ventas.index', compact(
+            'productos',
+            'ventas',
+            'carrito',
+            'totalCarrito',
+            'fechaDesde',
+            'fechaHasta',
+            'filtrandoPorFecha',
+            'totalVentasFiltradas',
+        ));
     }
 
     public function create(Request $request): View

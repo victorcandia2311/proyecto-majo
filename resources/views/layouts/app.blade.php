@@ -92,7 +92,7 @@
                 @endif
                 @if (session('mensaje'))
                     <div class="alert alert-success" role="status">
-                        {{ ['registrado' => 'Asistencia registrada correctamente.', 'actualizado' => 'Asistencia actualizada correctamente.', 'eliminado' => 'Asistencia eliminada correctamente.'][session('mensaje')] ?? session('mensaje') }}
+                        {{ ['registrado' => 'Asistencia registrada correctamente.', 'actualizado' => 'Asistencia actualizada correctamente.', 'eliminado' => 'Asistencia eliminada correctamente.', 'temporal_registrado' => 'Empleado temporal registrado correctamente.', 'temporal_ingreso' => 'Ingreso del empleado temporal registrado correctamente.', 'temporal_salida' => 'Salida del empleado temporal registrada correctamente.', 'producto_eliminado' => 'El producto se quitó de la lista. Se conservó su historial de ventas e inventario.'][session('mensaje')] ?? session('mensaje') }}
                     </div>
                 @endif
                 @if (session('venta_exitosa'))
@@ -105,6 +105,21 @@
             </div>
             <footer class="app-footer">MAJO · Sistema de inventario y ventas · Versión 1.01</footer>
         </main>
+    </div>
+    <div class="modal fade" id="confirm-action-modal" tabindex="-1" aria-labelledby="confirm-action-title" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="confirm-action-title"><i class="bi bi-exclamation-triangle-fill text-warning me-2" aria-hidden="true"></i>¿Confirmas esta acción?</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body" data-confirm-message></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" data-confirm-submit>Confirmar</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}" defer></script>

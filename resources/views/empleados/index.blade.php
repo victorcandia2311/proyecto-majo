@@ -23,12 +23,11 @@
         </div>
     </div>
     <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
-        <thead class="table-dark"><tr><th>ID</th><th>Nombres</th><th>Usuario</th><th>Documento</th><th>Tipo</th><th>Acciones</th></tr></thead>
+        <thead class="table-dark"><tr><th>ID</th><th>Nombres</th><th>Usuario</th><th>Documento</th><th>Acciones</th></tr></thead>
         <tbody>
             @forelse ($empleados as $empleado)
-                <tr data-search-row data-search-value="{{ $empleado->id_empleado }} {{ $empleado->nombres }} {{ $empleado->usuario }} {{ $empleado->documento_identidad }} {{ $empleado->es_eventual ? 'eventual' : 'permanente' }}" data-suggestion-label="{{ $empleado->nombres }} · {{ $empleado->usuario ?: 'Sin usuario' }}">
+                <tr data-search-row data-search-value="{{ $empleado->id_empleado }} {{ $empleado->nombres }} {{ $empleado->usuario }} {{ $empleado->documento_identidad }}" data-suggestion-label="{{ $empleado->nombres }} · {{ $empleado->usuario ?: 'Sin usuario' }}">
                     <td>{{ $empleado->id_empleado }}</td><td>{{ $empleado->nombres }}</td><td>{{ $empleado->usuario ?: 'Sin usuario' }}</td><td>{{ $empleado->documento_identidad }}</td>
-                    <td><span class="badge {{ $empleado->es_eventual ? 'bg-warning text-dark' : 'bg-success' }}">{{ $empleado->es_eventual ? 'Eventual' : 'Permanente' }}</span></td>
                     <td><div class="action-buttons">
                         <a href="{{ route('empleados.edit', $empleado) }}" class="btn btn-warning btn-sm">Editar</a>
                         <form method="POST" action="{{ route('empleados.destroy', $empleado) }}" data-confirm="¿Eliminar este empleado y sus asistencias?">
@@ -39,9 +38,9 @@
                     </div></td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="text-center text-muted py-4">No hay empleados registrados.</td></tr>
+                <tr><td colspan="5" class="text-center text-muted py-4">No hay empleados registrados.</td></tr>
             @endforelse
-            <tr data-search-empty hidden><td colspan="6" class="text-center text-muted py-4">No encontramos empleados que coincidan.</td></tr>
+            <tr data-search-empty hidden><td colspan="5" class="text-center text-muted py-4">No encontramos empleados que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>

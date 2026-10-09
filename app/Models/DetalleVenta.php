@@ -44,6 +44,6 @@ class DetalleVenta extends Model
 
     public function producto(): BelongsTo
     {
-        return $this->belongsTo(Producto::class, 'id_producto', 'id_producto');
+        return $this->belongsTo(Producto::class, 'id_producto', 'id_producto')->withTrashed();
     }
 }

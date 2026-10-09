@@ -3,6 +3,7 @@
 use App\Models\Asistencia;
 use App\Models\DetalleVenta;
 use App\Models\Empleado;
+use App\Models\EmpleadoTemporal;
 use App\Models\MovimientoInventario;
 use App\Models\Producto;
 use App\Models\ProductoProveedor;
@@ -36,12 +37,24 @@ beforeEach(function () {
         $table->foreign('id_empleado')->references('id_empleado')->on('empleado')->cascadeOnDelete();
     });
 
+    Schema::create('empleado_temporal', function (Blueprint $table) {
+        $table->increments('id_temporal');
+        $table->integer('id_empleado')->nullable();
+        $table->string('nombre_temp', 100)->nullable();
+        $table->date('fecha_inicio')->nullable();
+        $table->date('fecha_fin')->nullable();
+        $table->time('hora_ingreso')->nullable();
+        $table->time('hora_salida')->nullable();
+        $table->string('agencia_outsourcing', 100)->nullable();
+    });
+
     Schema::create('producto', function (Blueprint $table) {
         $table->increments('id_producto');
         $table->string('nombre_producto', 150);
         $table->integer('stock_actual')->default(0);
         $table->integer('stock_minimo_alerta')->default(10);
         $table->decimal('precio_venta', 10, 2);
+        $table->softDeletes();
     });
 
     Schema::create('proveedor', function (Blueprint $table) {
@@ -106,11 +119,71 @@ test('module routes return their expected view data', function (string $routeNam
     ['proveedores.asignar-producto', 'proveedores.asignar_producto', ['proveedores', 'productos']],
     ['empleados.index', 'empleados.index', ['empleados']],
     ['inventario.index', 'inventario.index', ['productos', 'movimientos']],
-    ['asistencia.index', 'asistencia.index', ['empleados', 'asistencias']],
+    ['asistencia.index', 'asistencia.index', ['empleados', 'asistencias', 'empleadosTemporales']],
     ['ventas.index', 'ventas.index', ['productos', 'ventas', 'carrito']],
     ['ventas.nueva', 'ventas.nueva', ['productos', 'carrito', 'totalCarrito']],
     ['dashboard.index', 'dashboard.index', ['resumen', 'rankingProductos', 'ventasPorMes', 'ventasPorMetodo']],
 ]);
+
+test('employee registration and listing do not show employee type', function () {
+    $this->get(route('empleados.index'))
+        ->assertOk()
+        ->assertDontSee('>Tipo<', false)
+        ->assertDontSee('es_eventual')
+        ->assertDontSee('Permanente')
+        ->assertDontSee('Eventual');
+
+    $this->post(route('empleados.store'), [
+        'nombres' => 'Ana',
+        'documento_identidad' => '00123456',
+        'usuario' => 'ana',
+    ])->assertRedirectToRoute('empleados.index');
+
+    expect(Empleado::sole()->es_eventual)->toBeFalse();
+});
+
+test('inventory history shows thirty movements per page', function () {
+    $producto = Producto::factory()->create();
+    MovimientoInventario::factory()->count(31)->for($producto, 'producto')->create();
+
+    $response = $this->get(route('inventario.index'))->assertOk();
+
+    expect($response['movimientos']->count())->toBe(30);
+    expect($response['movimientos']->total())->toBe(31);
+    expect($response['movimientos']->url(2))->toContain('page=2');
+});
+
+test('sales history paginates thirty records and totals every sale within the selected dates', function () {
+    Venta::factory()->count(31)->create([
+        'fecha_hora' => '2026-10-04 12:00:00',
+        'total_venta' => '10.00',
+    ]);
+    Venta::factory()->create([
+        'fecha_hora' => '2026-10-06 12:00:00',
+        'total_venta' => '500.00',
+    ]);
+
+    $response = $this->get(route('ventas.index', [
+        'fecha_desde' => '2026-10-01',
+        'fecha_hasta' => '2026-10-05',
+    ]))->assertOk()->assertSee('Total de ventas del periodo seleccionado');
+
+    expect($response['ventas']->count())->toBe(30);
+    expect($response['ventas']->total())->toBe(31);
+    expect((float) $response['totalVentasFiltradas'])->toBe(310.0);
+    expect($response['ventas']->url(2))->toContain('fecha_desde=2026-10-01');
+});
+
+test('sales history hides the period total when no date filter is selected', function () {
+    $this->get(route('ventas.index'))->assertDontSee('Total de ventas del periodo seleccionado');
+});
+
+test('sales date filters reject an end date earlier than the start date', function () {
+    $this->get(route('ventas.index', [
+        'fecha_desde' => '2026-10-05',
+        'fecha_hasta' => '2026-10-01',
+    ]))->assertSessionHasErrors('fecha_hasta');
+});
 
 test('edit and detail routes bind legacy primary keys', function (string $modelClass, string $routeName, string $viewName, string $variable) {
     $model = $modelClass::factory()->create();
@@ -124,7 +197,7 @@ test('edit and detail routes bind legacy primary keys', function (string $modelC
     [Venta::class, 'ventas.show', 'ventas.detalle', 'venta'],
 ]);
 
-test('products can be created edited and deleted without changing stock through the edit form', function () {
+test('products can be created edited and archived without changing stock through the edit form', function () {
     $data = Producto::factory()->raw(['stock_actual' => 5, 'precio_venta' => '12.50']);
     $this->post(route('productos.store'), $data)->assertRedirectToRoute('productos.index');
     $producto = Producto::sole();
@@ -137,17 +210,20 @@ test('products can be created edited and deleted without changing stock through 
     expect($producto->fresh()->nombre_producto)->toBe('Proteína');
 
     $this->delete(route('productos.destroy', $producto))->assertRedirectToRoute('productos.index');
-    $this->assertModelMissing($producto);
+    $this->assertSoftDeleted($producto);
+    expect(Producto::find($producto->getKey()))->toBeNull();
 });
 
-test('products with sales or inventory history cannot be deleted', function (string $relatedClass) {
+test('products with sales or inventory history can be archived without deleting that history', function (string $relatedClass) {
     $producto = Producto::factory()->create();
-    $relatedClass::factory()->for($producto, 'producto')->create();
+    $relatedRecord = $relatedClass::factory()->for($producto, 'producto')->create();
 
-    $this->delete(route('productos.destroy', $producto))->assertSessionHasErrors([
-        'producto' => 'No se puede eliminar un producto con ventas o movimientos de inventario.',
-    ]);
-    $this->assertModelExists($producto);
+    $this->delete(route('productos.destroy', $producto))->assertRedirectToRoute('productos.index')
+        ->assertSessionHas('mensaje', 'producto_eliminado');
+
+    $this->assertSoftDeleted($producto);
+    $this->assertModelExists($relatedRecord);
+    expect($relatedRecord->fresh()->producto->is($producto))->toBeTrue();
 })->with([
     'ventas' => [DetalleVenta::class],
     'inventario' => [MovimientoInventario::class],
@@ -406,6 +482,151 @@ test('manual attendance rejects duplicate dates and invalid time order', functio
     $this->assertModelMissing($asistencia);
 });
 
+test('manual attendance registration does not require entering check-in or check-out times', function () {
+    $empleado = Empleado::factory()->create();
+
+    $this->get(route('asistencia.index'))->assertDontSee('name="hora_ingreso"', false)
+        ->assertDontSee('name="hora_salida"', false);
+    $this->post(route('asistencia.store'), [
+        'id_empleado' => $empleado->getKey(),
+        'fecha' => '2026-09-25',
+    ])->assertRedirectToRoute('asistencia.index');
+
+    $asistencia = Asistencia::sole();
+    expect($asistencia->hora_ingreso)->toBeNull();
+    expect($asistencia->hora_salida)->toBeNull();
+});
+
+test('attendance page removes manual registration and provides clock controls for regular and temporary employees', function () {
+    $empleado = Empleado::factory()->create();
+    EmpleadoTemporal::create([
+        'nombre_temp' => 'Ana Temporal',
+    ]);
+
+    $this->get(route('asistencia.index'))->assertOk()
+        ->assertDontSee('Registrar asistencia</h2>')
+        ->assertDontSee('temporal-fecha-inicio')
+        ->assertDontSee('temporal-fecha-fin')
+        ->assertSee('Registrar ingreso')
+        ->assertSee('Registrar salida')
+        ->assertSee('Empleado temporal')
+        ->assertSee('Ana Temporal')
+        ->assertSee((string) $empleado->nombres);
+});
+
+test('attendance inventory shows daily attendance for employees and temporary employees', function () {
+    $this->travelTo(now()->setDate(2026, 10, 9)->setTime(12, 0));
+    $asistio = Empleado::factory()->create(['nombres' => 'Empleado Presente']);
+    Empleado::factory()->create(['nombres' => 'Empleado Ausente']);
+    Empleado::factory()->create(['nombres' => 'Empleado de Otro Dia']);
+
+    Asistencia::create([
+        'id_empleado' => $asistio->getKey(),
+        'fecha' => '2026-10-09',
+        'hora_ingreso' => '08:05:00',
+        'hora_salida' => '11:45:00',
+    ]);
+    Asistencia::create([
+        'id_empleado' => Empleado::where('nombres', 'Empleado de Otro Dia')->value('id_empleado'),
+        'fecha' => '2026-10-08',
+        'hora_ingreso' => '08:00:00',
+        'hora_salida' => '17:00:00',
+    ]);
+    EmpleadoTemporal::create([
+        'nombre_temp' => 'Temporal Presente',
+        'fecha_inicio' => '2026-10-09',
+        'hora_ingreso' => '09:00:00',
+        'hora_salida' => '12:30:00',
+    ]);
+    EmpleadoTemporal::create([
+        'nombre_temp' => 'Temporal de Otro Dia',
+        'fecha_inicio' => '2026-10-08',
+        'hora_ingreso' => '08:00:00',
+        'hora_salida' => '17:00:00',
+    ]);
+
+    $this->get(route('asistencia.inventario'))
+        ->assertOk()
+        ->assertViewIs('asistencia.inventario')
+        ->assertSee('Empleado Presente')
+        ->assertSee('Empleado Ausente')
+        ->assertSee('Asistió')
+        ->assertSee('No asistió')
+        ->assertSee('08:05:00')
+        ->assertSee('11:45:00')
+        ->assertSee('Temporal Presente')
+        ->assertSee('09:00:00')
+        ->assertSee('12:30:00')
+        ->assertSee('Empleado de Otro Dia')
+        ->assertDontSee('Temporal de Otro Dia')
+        ->assertSee('value="2026-10-09"', false);
+
+    $this->get(route('asistencia.inventario', ['fecha' => '2026-10-08']))
+        ->assertOk()
+        ->assertSee('Empleado de Otro Dia')
+        ->assertSee('Temporal de Otro Dia')
+        ->assertSee('08:00:00')
+        ->assertDontSee('Temporal Presente')
+        ->assertSee('value="2026-10-08"', false);
+});
+
+test('temporary employees can be registered by name only and appear in their searchable history', function () {
+    $this->post(route('asistencia.temporales.store'), [
+        'nombre_temp' => 'Ana Temporal',
+    ])->assertRedirectToRoute('asistencia.index')->assertSessionHas('mensaje', 'temporal_registrado');
+
+    $periodo = EmpleadoTemporal::sole();
+    expect($periodo->nombre_temp)->toBe('Ana Temporal');
+    expect($periodo->id_empleado)->toBeNull();
+    expect($periodo->fecha_inicio)->toBeNull();
+    expect($periodo->fecha_fin)->toBeNull();
+
+    $this->get(route('asistencia.index'))->assertOk()
+        ->assertSee('Historial de empleados temporales')
+        ->assertSee('Ana Temporal')
+        ->assertSee('Hora de ingreso')
+        ->assertSee('Hora de salida')
+        ->assertSee('data-live-region="temporary-employees"', false)
+        ->assertSee('data-list-search-input', false);
+});
+
+test('temporary employee periods require a name of at most one hundred characters', function (string $name) {
+    $this->post(route('asistencia.temporales.store'), [
+        'nombre_temp' => $name,
+    ])->assertSessionHasErrors('nombre_temp');
+
+    $this->assertDatabaseEmpty('empleado_temporal');
+})->with([
+    'missing name' => [''],
+    'name too long' => [str_repeat('a', 101)],
+]);
+
+test('temporary employees can clock in once and clock out only after clocking in', function () {
+    $this->travelTo(now()->setTime(8, 0));
+    $temporal = EmpleadoTemporal::create([
+        'nombre_temp' => 'Ana Temporal',
+    ]);
+    $data = ['id_temporal' => $temporal->getKey()];
+
+    $this->post(route('asistencia.temporales.salida'), $data)->assertSessionHasErrors([
+        'id_temporal' => 'Este empleado temporal no tiene un ingreso abierto para registrar la salida.',
+    ]);
+    $this->post(route('asistencia.temporales.ingreso'), $data)->assertRedirectToRoute('asistencia.index');
+    $this->post(route('asistencia.temporales.ingreso'), $data)->assertSessionHasErrors([
+        'id_temporal' => 'Este empleado temporal ya tiene un ingreso registrado.',
+    ]);
+
+    $this->travel(3)->hours();
+    $this->post(route('asistencia.temporales.salida'), $data)->assertRedirectToRoute('asistencia.index')
+        ->assertSessionHas('mensaje', 'temporal_salida');
+    $this->assertDatabaseHas('empleado_temporal', [
+        'id_temporal' => $temporal->getKey(),
+        'fecha_inicio' => now()->toDateString(),
+        'hora_ingreso' => '08:00:00',
+        'hora_salida' => '11:00:00',
+    ]);
+});
+
 test('clock in and out require an open attendance and allow a later shift', function () {
     $this->travelTo(now()->setDate(2026, 9, 25)->setTime(8, 0));
     $empleado = Empleado::factory()->create();
@@ -477,6 +698,7 @@ test('attendance page displays a fallback for a record without a related employe
     $html = view('asistencia.index', [
         'empleados' => collect(),
         'asistencias' => collect([$asistencia]),
+        'empleadosTemporales' => collect(),
     ])->render();
 
     expect($html)->toContain('Empleado eliminado')->toContain('—');

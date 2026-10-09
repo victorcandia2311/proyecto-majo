@@ -53,8 +53,12 @@ Route::middleware(['auth', 'auth.session', 'role:admin,empleado'])->group(functi
         });
 
         Route::prefix('asistencia')->name('asistencia.')->controller(AsistenciaController::class)->group(function (): void {
+            Route::get('inventario', 'inventario')->name('inventario');
             Route::post('ingreso', 'registrarIngreso')->name('ingreso');
             Route::post('salida', 'registrarSalida')->name('salida');
+            Route::post('temporal', 'registrarTemporal')->name('temporales.store');
+            Route::post('temporal/ingreso', 'registrarIngresoTemporal')->name('temporales.ingreso');
+            Route::post('temporal/salida', 'registrarSalidaTemporal')->name('temporales.salida');
         });
         Route::resource('asistencia', AsistenciaController::class)->only(['index', 'store', 'edit', 'update', 'destroy'])
             ->parameters(['asistencia' => 'asistencia']);

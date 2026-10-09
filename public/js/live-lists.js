@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const resultCount = region.querySelector('[data-search-count]');
         const dateFrom = region.querySelector('[data-date-filter-start]');
         const dateTo = region.querySelector('[data-date-filter-end]');
+        const dateFilterForm = region.querySelector('[data-date-filter-form]');
 
         if (!input || !suggestions) return;
 
@@ -69,6 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('focus', update);
         dateFrom?.addEventListener('input', update);
         dateTo?.addEventListener('input', update);
+        dateFilterForm?.querySelectorAll('input[type="date"]').forEach((dateInput) => {
+            dateInput.addEventListener('change', () => dateFilterForm.requestSubmit());
+        });
         input.addEventListener('keydown', (event) => {
             const options = [...suggestions.querySelectorAll('[role="option"]')];
             if (event.key === 'Escape') {

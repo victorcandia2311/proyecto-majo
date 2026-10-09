@@ -42,6 +42,7 @@ beforeEach(function () {
         $table->integer('stock_actual')->default(0);
         $table->integer('stock_minimo_alerta')->default(10);
         $table->decimal('precio_venta', 10, 2);
+        $table->softDeletes();
     });
 
     Schema::create('proveedor', function (Blueprint $table) {

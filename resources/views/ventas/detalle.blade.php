@@ -25,7 +25,7 @@
         <tbody>
             @forelse ($detalles as $detalle)
                 <tr>
-                    <td>{{ $detalle->producto->nombre_producto }}</td><td>{{ $detalle->cantidad }}</td>
+                    <td>{{ $detalle->producto?->nombre_producto ?? 'Producto eliminado' }}</td><td>{{ $detalle->cantidad }}</td>
                     <td class="text-nowrap">S/ {{ number_format((float) $detalle->precio_unitario, 2) }}</td>
                     <td class="text-nowrap">S/ {{ number_format($detalle->cantidad * (float) $detalle->precio_unitario, 2) }}</td>
                 </tr>

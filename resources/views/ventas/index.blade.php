@@ -9,11 +9,14 @@
 </div>
 @include('ventas._carrito', compact('productos', 'carrito', 'totalCarrito'))
 <div class="card" data-live-region="sales">
-    <div class="card-header list-card-header">
+    <div class="card-header list-card-header sales-history-header">
         <h2 class="h6 mb-0">Historial de ventas</h2>
-        <div class="d-flex flex-wrap align-items-end gap-2">
-            <div><label class="form-label small mb-1" for="sales-date-from">Desde</label><input id="sales-date-from" class="form-control form-control-sm" type="date" data-date-filter-start></div>
-            <div><label class="form-label small mb-1" for="sales-date-to">Hasta</label><input id="sales-date-to" class="form-control form-control-sm" type="date" data-date-filter-end></div>
+        <div class="sales-history-tools">
+            <form action="{{ route('ventas.index') }}" method="GET" class="sales-date-filters" data-date-filter-form>
+                <div><label class="form-label small mb-1" for="sales-date-from">Desde</label><input id="sales-date-from" name="fecha_desde" value="{{ $fechaDesde }}" class="form-control form-control-sm" type="date" data-date-filter-start></div>
+                <div><label class="form-label small mb-1" for="sales-date-to">Hasta</label><input id="sales-date-to" name="fecha_hasta" value="{{ $fechaHasta }}" class="form-control form-control-sm" type="date" data-date-filter-end></div>
+                <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+            </form>
             <div class="list-search-wrap" data-list-search>
                 <label class="visually-hidden" for="filter-sales">Buscar ventas</label>
                 <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-sales" type="search" placeholder="Buscar ventas..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-sales" data-list-search-input></div>
@@ -22,6 +25,13 @@
             </div>
         </div>
     </div>
+    @if ($filtrandoPorFecha)
+        <div class="sales-filter-total" role="status">
+            <i class="bi bi-calendar-check" aria-hidden="true"></i>
+            <span>Total de ventas del periodo seleccionado</span>
+            <strong>S/ {{ number_format((float) $totalVentasFiltradas, 2) }}</strong>
+        </div>
+    @endif
     <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
         <thead class="table-dark"><tr><th>N.º</th><th>Fecha</th><th>Cliente</th><th>Método de pago</th><th>Total</th><th>Acción</th></tr></thead>
         <tbody>
@@ -38,5 +48,11 @@
             <tr data-search-empty hidden><td colspan="6" class="text-center text-muted py-4">No encontramos ventas que coincidan.</td></tr>
         </tbody>
     </table></div>
+    @if ($ventas->hasPages())
+        <div class="list-pagination">
+            <span>Mostrando {{ $ventas->firstItem() }}–{{ $ventas->lastItem() }} de {{ $ventas->total() }} ventas</span>
+            {{ $ventas->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
 </div>
 @endsection

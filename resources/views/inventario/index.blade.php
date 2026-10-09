@@ -84,5 +84,11 @@
             <tr data-search-empty hidden><td colspan="5" class="text-center text-muted py-4">No encontramos movimientos que coincidan.</td></tr>
         </tbody>
     </table></div>
+    @if ($movimientos->hasPages())
+        <div class="list-pagination">
+            <span>Mostrando {{ $movimientos->firstItem() }}–{{ $movimientos->lastItem() }} de {{ $movimientos->total() }} movimientos</span>
+            {{ $movimientos->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
 </div>
 @endsection

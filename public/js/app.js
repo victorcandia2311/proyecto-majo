@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const normalizeSelectSearch = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
     let customSelectId = 0;
 
     document.querySelectorAll('select.form-select:not([multiple])').forEach((select) => {
@@ -8,14 +9,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const trigger = document.createElement('button');
         const value = document.createElement('span');
         const caret = document.createElement('span');
-        const listbox = document.createElement('div');
-        const listboxId = `custom-select-options-${customSelectId}`;
-        const optionElements = [];
-        const labels = Array.from(select.labels);
-        let activeIndex = -1;
+        const menu = document.createElement('div');
+        const search = document.createElement('input');
+        const optionsList = document.createElement('div');
+        const menuId = `custom-select-menu-${customSelectId}`;
+        const optionsId = `${menuId}-options`;
+        const options = Array.from(select.options).filter((option) => !option.hidden);
+        let activeOptionIndex = -1;
         let isOpen = false;
-        let searchText = '';
-        let searchTimeout;
 
         wrapper.className = 'custom-select';
         trigger.type = 'button';
@@ -23,143 +24,155 @@ document.addEventListener('DOMContentLoaded', () => {
         trigger.setAttribute('role', 'combobox');
         trigger.setAttribute('aria-haspopup', 'listbox');
         trigger.setAttribute('aria-expanded', 'false');
-        trigger.setAttribute('aria-controls', listboxId);
-        trigger.setAttribute('aria-autocomplete', 'none');
+        trigger.setAttribute('aria-controls', optionsId);
         value.className = 'custom-select-value';
         caret.className = 'custom-select-caret';
         caret.setAttribute('aria-hidden', 'true');
         trigger.append(value, caret);
 
-        listbox.id = listboxId;
-        listbox.className = 'custom-select-menu';
-        listbox.setAttribute('role', 'listbox');
-        listbox.hidden = true;
+        menu.id = menuId;
+        menu.className = 'custom-select-menu';
+        menu.hidden = true;
+        search.type = 'search';
+        search.className = 'custom-select-search';
+        search.placeholder = 'Escribe para buscar...';
+        search.setAttribute('aria-label', 'Buscar opción');
+        search.setAttribute('aria-controls', optionsId);
+        optionsList.id = optionsId;
+        optionsList.className = 'custom-select-options';
+        optionsList.setAttribute('role', 'listbox');
+        menu.append(search, optionsList);
 
+        const labels = Array.from(select.labels);
         labels.forEach((label, index) => {
             if (!label.id) {
                 label.id = `custom-select-label-${customSelectId}-${index + 1}`;
             }
         });
-
         if (labels.length > 0) {
             trigger.setAttribute('aria-labelledby', labels.map((label) => label.id).join(' '));
         } else {
             trigger.setAttribute('aria-label', select.getAttribute('aria-label') || select.name || 'Seleccionar opción');
         }
 
-        Array.from(select.options).forEach((option, index) => {
-            if (option.hidden) {
-                return;
-            }
-
-            const optionElement = document.createElement('div');
-            optionElement.id = `${listboxId}-option-${index}`;
-            optionElement.className = 'custom-select-option';
-            optionElement.dataset.optionIndex = String(index);
-            optionElement.setAttribute('role', 'option');
-            optionElement.textContent = option.label;
-            optionElement.title = option.label;
-            listbox.append(optionElement);
-            optionElements.push({ element: optionElement, option, index });
-        });
-
         select.parentNode.insertBefore(wrapper, select);
         wrapper.append(trigger, select);
-        document.body.append(listbox);
-
+        document.body.append(menu);
         select.classList.add('custom-select-native');
         select.tabIndex = -1;
         select.setAttribute('aria-hidden', 'true');
 
-        const enabledOptions = () => optionElements.filter(({ option }) => !option.matches(':disabled'));
-        const selectedOptionIndex = () => optionElements.findIndex(({ option }) => option.selected && !option.disabled);
+        const visibleOptions = () => Array.from(optionsList.querySelectorAll('[data-option-index]'));
+        const positionMenu = () => {
+            const bounds = trigger.getBoundingClientRect();
+            const padding = 8;
+            const gap = 4;
+            const menuWidth = Math.min(bounds.width, window.innerWidth - padding * 2);
+            const menuHeight = menu.getBoundingClientRect().height;
+            const spaceBelow = window.innerHeight - bounds.bottom - padding - gap;
+            const spaceAbove = bounds.top - padding - gap;
+            const openAbove = spaceBelow < menuHeight && spaceAbove > spaceBelow;
 
+            menu.style.width = `${menuWidth}px`;
+            menu.style.left = `${Math.max(padding, Math.min(bounds.left, window.innerWidth - menuWidth - padding))}px`;
+            menu.style.top = `${openAbove ? Math.max(padding, bounds.top - menuHeight - gap) : bounds.bottom + gap}px`;
+        };
+        const updateActiveOption = (optionElement) => {
+            visibleOptions().forEach((element) => element.removeAttribute('data-active'));
+            if (!optionElement) {
+                activeOptionIndex = -1;
+                trigger.removeAttribute('aria-activedescendant');
+                search.removeAttribute('aria-activedescendant');
+                return;
+            }
+
+            activeOptionIndex = Number(optionElement.dataset.optionIndex);
+            optionElement.setAttribute('data-active', '');
+            trigger.setAttribute('aria-activedescendant', optionElement.id);
+            search.setAttribute('aria-activedescendant', optionElement.id);
+            optionElement.scrollIntoView({ block: 'nearest' });
+        };
         const syncSelection = () => {
             const selectedOption = select.selectedOptions[0];
-            value.textContent = selectedOption ? selectedOption.label : 'Seleccionar opción';
+            value.textContent = selectedOption?.label || 'Seleccionar opción';
             trigger.disabled = select.matches(':disabled');
             trigger.setAttribute('aria-required', String(select.required));
-
-            optionElements.forEach(({ element, option }) => {
+            visibleOptions().forEach((element) => {
+                const option = options[Number(element.dataset.optionIndex)];
                 element.setAttribute('aria-selected', String(option.selected));
                 element.setAttribute('aria-disabled', String(option.matches(':disabled')));
             });
-
             if (select.validity.valid) {
                 trigger.removeAttribute('aria-invalid');
             }
         };
+        const renderOptions = () => {
+            const query = normalizeSelectSearch(search.value);
+            const filteredOptions = options
+                .map((option, index) => ({ option, index }))
+                .filter(({ option }) => normalizeSelectSearch(option.label).includes(query));
+            optionsList.replaceChildren();
 
-        const updateActiveOption = (index) => {
-            const selectableOptions = enabledOptions();
-            const nextOption = selectableOptions.find((item) => item.index === index) || selectableOptions[0];
-
-            if (!nextOption) {
-                activeIndex = -1;
-                trigger.removeAttribute('aria-activedescendant');
-                return;
+            filteredOptions.forEach(({ option, index }) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.id = `${menuId}-option-${index}`;
+                button.className = 'custom-select-option';
+                button.dataset.optionIndex = String(index);
+                button.setAttribute('role', 'option');
+                button.setAttribute('aria-selected', String(option.selected));
+                button.setAttribute('aria-disabled', String(option.matches(':disabled')));
+                button.textContent = option.label;
+                button.title = option.label;
+                optionsList.append(button);
+            });
+            if (filteredOptions.length === 0) {
+                const empty = document.createElement('p');
+                empty.className = 'custom-select-empty';
+                empty.textContent = 'No hay opciones que coincidan.';
+                optionsList.append(empty);
             }
 
-            activeIndex = nextOption.index;
-            trigger.setAttribute('aria-activedescendant', nextOption.element.id);
-            optionElements.forEach(({ element, index: optionIndex }) => {
-                element.toggleAttribute('data-active', optionIndex === activeIndex);
-            });
-            nextOption.element.scrollIntoView({ block: 'nearest' });
+            const activeElement = filteredOptions.find(({ index }) => index === activeOptionIndex)
+                || filteredOptions.find(({ option }) => option.selected && !option.matches(':disabled'))
+                || filteredOptions.find(({ option }) => !option.matches(':disabled'));
+            updateActiveOption(activeElement ? optionsList.querySelector(`[data-option-index="${activeElement.index}"]`) : null);
+            syncSelection();
+            positionMenu();
         };
-
-        const positionListbox = () => {
-            const bounds = trigger.getBoundingClientRect();
-            const viewportPadding = 8;
-            const gap = 4;
-            const desiredHeight = Math.min(optionElements.length * 40 + 10, 130);
-            const spaceBelow = window.innerHeight - bounds.bottom - viewportPadding - gap;
-            const spaceAbove = bounds.top - viewportPadding - gap;
-            const openAbove = spaceBelow < desiredHeight && spaceAbove > spaceBelow;
-            const availableHeight = Math.max(0, openAbove ? spaceAbove : spaceBelow);
-            const menuHeight = Math.min(desiredHeight, availableHeight);
-            const menuWidth = Math.min(bounds.width, window.innerWidth - viewportPadding * 2);
-
-            listbox.style.maxHeight = `${menuHeight}px`;
-            listbox.style.width = `${menuWidth}px`;
-            listbox.style.left = `${Math.max(viewportPadding, Math.min(bounds.left, window.innerWidth - menuWidth - viewportPadding))}px`;
-            listbox.style.top = `${openAbove ? Math.max(viewportPadding, bounds.top - menuHeight - gap) : bounds.bottom + gap}px`;
-        };
-
-        const closeListbox = () => {
+        const closeMenu = (restoreFocus = false) => {
             isOpen = false;
-            listbox.hidden = true;
+            menu.hidden = true;
             wrapper.classList.remove('is-open');
             trigger.setAttribute('aria-expanded', 'false');
             trigger.removeAttribute('aria-activedescendant');
+            search.removeAttribute('aria-activedescendant');
+            if (restoreFocus) {
+                trigger.focus();
+            }
         };
-
-        const openListbox = () => {
+        const openMenu = () => {
             if (trigger.disabled || isOpen) {
                 return;
             }
-
             isOpen = true;
-            listbox.hidden = false;
+            menu.hidden = false;
             wrapper.classList.add('is-open');
             trigger.setAttribute('aria-expanded', 'true');
-            updateActiveOption(selectedOptionIndex());
-            positionListbox();
+            search.value = '';
+            renderOptions();
+            search.focus();
         };
-
         const chooseOption = (index) => {
-            const optionEntry = optionElements.find((entry) => entry.index === index);
-
-            if (!optionEntry || optionEntry.option.matches(':disabled') || trigger.disabled) {
+            const option = options[index];
+            if (!option || option.matches(':disabled') || trigger.disabled) {
                 return;
             }
 
             const selectionChanged = select.selectedIndex !== index;
             select.selectedIndex = index;
             syncSelection();
-            closeListbox();
-            trigger.focus();
-
+            closeMenu(true);
             if (selectionChanged) {
                 select.dispatchEvent(new Event('input', { bubbles: true }));
                 select.dispatchEvent(new Event('change', { bubbles: true }));
@@ -167,108 +180,77 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         syncSelection();
-
         trigger.addEventListener('click', () => {
             if (isOpen) {
-                closeListbox();
+                closeMenu();
             } else {
-                openListbox();
+                openMenu();
             }
         });
-        trigger.addEventListener('blur', closeListbox);
-
         trigger.addEventListener('keydown', (event) => {
-            const selectableOptions = enabledOptions();
-
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) {
                 event.preventDefault();
-
-                if (!isOpen) {
-                    openListbox();
-                    if (event.key === 'ArrowUp' && selectedOptionIndex() < 0 && selectableOptions.length > 0) {
-                        updateActiveOption(selectableOptions[selectableOptions.length - 1].index);
-                    }
-                    return;
-                }
-
-                const currentPosition = selectableOptions.findIndex(({ index }) => index === activeIndex);
-                const direction = event.key === 'ArrowDown' ? 1 : -1;
-                const nextPosition = (currentPosition + direction + selectableOptions.length) % selectableOptions.length;
-
-                if (selectableOptions.length > 0) {
-                    updateActiveOption(selectableOptions[nextPosition].index);
-                }
-                return;
+                openMenu();
             }
-
-            if (!isOpen) {
-                return;
-            }
-
+        });
+        search.addEventListener('input', renderOptions);
+        search.addEventListener('keydown', (event) => {
+            const renderedOptions = visibleOptions().filter((option) => option.getAttribute('aria-disabled') !== 'true');
             if (event.key === 'Escape') {
                 event.preventDefault();
-                closeListbox();
-            } else if (event.key === 'Enter' || event.key === ' ') {
+                closeMenu(true);
+            } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
                 event.preventDefault();
-                chooseOption(activeIndex);
-            } else if (event.key === 'Home' || event.key === 'End') {
+                const currentPosition = renderedOptions.findIndex((option) => Number(option.dataset.optionIndex) === activeOptionIndex);
+                const direction = event.key === 'ArrowDown' ? 1 : -1;
+                const nextPosition = (currentPosition + direction + renderedOptions.length) % renderedOptions.length;
+                updateActiveOption(renderedOptions[nextPosition] || null);
+            } else if (event.key === 'Enter' && activeOptionIndex >= 0) {
                 event.preventDefault();
-                const option = event.key === 'Home' ? selectableOptions[0] : selectableOptions[selectableOptions.length - 1];
-                if (option) {
-                    updateActiveOption(option.index);
-                }
-            } else if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
-                searchText += event.key.toLocaleLowerCase();
-                window.clearTimeout(searchTimeout);
-                searchTimeout = window.setTimeout(() => {
-                    searchText = '';
-                }, 500);
-                const match = selectableOptions.find(({ option }) => option.label.toLocaleLowerCase().startsWith(searchText));
-                if (match) {
-                    updateActiveOption(match.index);
-                }
+                chooseOption(activeOptionIndex);
             }
         });
-
-        listbox.addEventListener('click', (event) => {
+        optionsList.addEventListener('pointerdown', (event) => {
             const optionElement = event.target.closest('[data-option-index]');
-
-            if (optionElement && listbox.contains(optionElement)) {
+            if (event.button === 0 && optionElement && optionsList.contains(optionElement)) {
+                event.preventDefault();
                 chooseOption(Number(optionElement.dataset.optionIndex));
             }
         });
-
-        select.addEventListener('change', syncSelection);
+        select.addEventListener('change', () => {
+            renderOptions();
+            syncSelection();
+        });
         select.addEventListener('invalid', (event) => {
             event.preventDefault();
             trigger.setAttribute('aria-invalid', 'true');
-            openListbox();
-            trigger.focus();
+            openMenu();
+            search.focus();
         });
-        select.form?.addEventListener('reset', () => {
-            window.setTimeout(syncSelection);
-        });
-
+        select.form?.addEventListener('reset', () => window.setTimeout(() => {
+            search.value = '';
+            renderOptions();
+            syncSelection();
+        }));
         labels.forEach((label) => {
             label.addEventListener('click', (event) => {
                 event.preventDefault();
                 trigger.focus();
             });
         });
-
         document.addEventListener('pointerdown', (event) => {
-            if (isOpen && !wrapper.contains(event.target) && !listbox.contains(event.target)) {
-                closeListbox();
+            if (isOpen && !wrapper.contains(event.target) && !menu.contains(event.target)) {
+                closeMenu();
             }
         });
         document.addEventListener('scroll', () => {
             if (isOpen) {
-                positionListbox();
+                positionMenu();
             }
         }, true);
         window.addEventListener('resize', () => {
             if (isOpen) {
-                positionListbox();
+                positionMenu();
             }
         });
     });
@@ -319,9 +301,56 @@ document.addEventListener('DOMContentLoaded', () => {
     mobile.addEventListener('change', () => closeSidebar());
     closeSidebar();
 
+    const confirmModalElement = document.getElementById('confirm-action-modal');
+    const confirmModal = confirmModalElement ? bootstrap.Modal.getOrCreateInstance(confirmModalElement) : null;
+    const confirmMessage = confirmModalElement?.querySelector('[data-confirm-message]');
+    const confirmButton = confirmModalElement?.querySelector('[data-confirm-submit]');
+    let pendingForm = null;
+    let pendingSubmitter = null;
+
     document.querySelectorAll('form[data-confirm]').forEach((form) => {
         form.addEventListener('submit', (event) => {
-            if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+            if (form.dataset.confirmed === 'true') {
+                delete form.dataset.confirmed;
+                return;
+            }
+
+            if (!confirmMessage || !confirmModal) {
+                if (!window.confirm(form.dataset.confirm)) {
+                    event.preventDefault();
+                }
+                return;
+            }
+
+            event.preventDefault();
+            pendingForm = form;
+            pendingSubmitter = event.submitter;
+            confirmMessage.textContent = form.dataset.confirm;
+            confirmModal.show();
         });
+    });
+
+    confirmButton?.addEventListener('click', () => {
+        if (!pendingForm) {
+            return;
+        }
+
+        const form = pendingForm;
+        const submitter = pendingSubmitter;
+        pendingForm = null;
+        pendingSubmitter = null;
+        form.dataset.confirmed = 'true';
+        confirmModal?.hide();
+
+        if (submitter instanceof HTMLElement && submitter.form === form) {
+            form.requestSubmit(submitter);
+        } else {
+            form.requestSubmit();
+        }
+    });
+
+    confirmModalElement?.addEventListener('hidden.bs.modal', () => {
+        pendingForm = null;
+        pendingSubmitter = null;
     });
 });
