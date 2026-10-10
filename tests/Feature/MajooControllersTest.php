@@ -142,19 +142,24 @@ test('employee registration and listing do not show employee type', function () 
     expect(Empleado::sole()->es_eventual)->toBeFalse();
 });
 
-test('inventory history shows thirty movements per page', function () {
+test('inventory history shows fifteen movements per page', function () {
     $producto = Producto::factory()->create();
-    MovimientoInventario::factory()->count(31)->for($producto, 'producto')->create();
+    MovimientoInventario::factory()->count(16)->for($producto, 'producto')->create();
 
     $response = $this->get(route('inventario.index'))->assertOk();
 
-    expect($response['movimientos']->count())->toBe(30);
-    expect($response['movimientos']->total())->toBe(31);
+    expect($response['movimientos']->count())->toBe(15);
+    expect($response['movimientos']->total())->toBe(16);
     expect($response['movimientos']->url(2))->toContain('page=2');
+    $response->assertSee('data-async-pagination', false);
+
+    $this->get(route('inventario.index', ['page' => 2]))
+        ->assertOk()
+        ->assertViewHas('movimientos', fn ($movimientos) => $movimientos->count() === 1);
 });
 
-test('sales history paginates thirty records and totals every sale within the selected dates', function () {
-    Venta::factory()->count(31)->create([
+test('sales history paginates fifteen records and totals every sale within the selected dates', function () {
+    Venta::factory()->count(16)->create([
         'fecha_hora' => '2026-10-04 12:00:00',
         'total_venta' => '10.00',
     ]);
@@ -168,10 +173,19 @@ test('sales history paginates thirty records and totals every sale within the se
         'fecha_hasta' => '2026-10-05',
     ]))->assertOk()->assertSee('Total de ventas del periodo seleccionado');
 
-    expect($response['ventas']->count())->toBe(30);
-    expect($response['ventas']->total())->toBe(31);
-    expect((float) $response['totalVentasFiltradas'])->toBe(310.0);
+    expect($response['ventas']->count())->toBe(15);
+    expect($response['ventas']->total())->toBe(16);
+    expect((float) $response['totalVentasFiltradas'])->toBe(160.0);
     expect($response['ventas']->url(2))->toContain('fecha_desde=2026-10-01');
+    expect($response['ventas']->url(2))->toContain('fecha_hasta=2026-10-05');
+    $response->assertSee('data-async-pagination', false);
+
+    $this->get(route('ventas.index', [
+        'fecha_desde' => '2026-10-01',
+        'fecha_hasta' => '2026-10-05',
+        'page' => 2,
+    ]))->assertOk()
+        ->assertViewHas('ventas', fn ($ventas) => $ventas->count() === 1);
 });
 
 test('sales history hides the period total when no date filter is selected', function () {
@@ -711,6 +725,7 @@ test('live pages expose automatic refresh regions and searchable suggestions', f
     if ($searchable) {
         $response->assertSee('data-list-search-input', false)->assertSee('role="listbox"', false);
     }
+
 })->with([
     ['dashboard.index', 'dashboard-metrics', false],
     ['productos.index', 'products', true],

@@ -85,7 +85,7 @@
         </tbody>
     </table></div>
     @if ($movimientos->hasPages())
-        <div class="list-pagination">
+        <div class="list-pagination" data-async-pagination>
             <span>Mostrando {{ $movimientos->firstItem() }}–{{ $movimientos->lastItem() }} de {{ $movimientos->total() }} movimientos</span>
             {{ $movimientos->links('pagination::bootstrap-5') }}
         </div>

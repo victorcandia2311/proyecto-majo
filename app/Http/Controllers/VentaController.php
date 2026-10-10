@@ -30,7 +30,7 @@ class VentaController extends Controller
             ->when($fechaHasta, fn ($query) => $query->whereDate('fecha_hora', '<=', $fechaHasta));
         $filtrandoPorFecha = $fechaDesde !== null || $fechaHasta !== null;
         $totalVentasFiltradas = $filtrandoPorFecha ? (clone $ventasQuery)->sum('total_venta') : null;
-        $ventas = $ventasQuery->orderByDesc('fecha_hora')->paginate(30)->withQueryString();
+        $ventas = $ventasQuery->orderByDesc('fecha_hora')->paginate(15)->withQueryString();
         $carrito = $request->session()->get('carrito', []);
         $totalCarrito = collect($carrito)->sum(fn (array $item): float => $item['cantidad'] * (float) $item['precio_unitario']);
 

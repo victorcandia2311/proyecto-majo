@@ -49,7 +49,7 @@
         </tbody>
     </table></div>
     @if ($ventas->hasPages())
-        <div class="list-pagination">
+        <div class="list-pagination" data-async-pagination>
             <span>Mostrando {{ $ventas->firstItem() }}–{{ $ventas->lastItem() }} de {{ $ventas->total() }} ventas</span>
             {{ $ventas->links('pagination::bootstrap-5') }}
         </div>
