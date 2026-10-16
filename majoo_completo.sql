@@ -113,6 +113,14 @@ COMMENT ON COLUMN "producto_proveedor"."id_producto" IS '';
 COMMENT ON COLUMN "producto_proveedor"."id_proveedor" IS '';
 COMMENT ON COLUMN "producto_proveedor"."precio_compra" IS '';
 
+CREATE TABLE "proveedor" (
+	"id_proveedor" SERIAL NOT NULL,
+	"nombre_empresa" VARCHAR(100) NOT NULL
+)
+;
+COMMENT ON COLUMN "proveedor"."id_proveedor" IS '';
+COMMENT ON COLUMN "proveedor"."nombre_empresa" IS '';
+
 CREATE TABLE "venta" (
 	"id_venta" SERIAL NOT NULL,
 	"fecha_hora" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
