@@ -5,23 +5,13 @@
 @section('content')
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <h1 class="h3 mb-0">Gestión de proveedores</h1>
-    <a href="{{ route('proveedores.asignar-producto') }}" class="btn btn-primary">Asignar producto</a>
-</div>
-<div class="card mb-4">
-    <div class="card-header"><h2 class="h6 mb-0">Registrar proveedor</h2></div>
-    <div class="card-body">
-        <form action="{{ route('proveedores.store') }}" method="POST" class="row g-3 align-items-end">
-            @csrf
-            <input type="hidden" name="_form" value="proveedor-nuevo">
-            <div class="col-md-8">
-                <label for="nombre_empresa" class="form-label">Nombre de la empresa</label>
-                <input id="nombre_empresa" type="text" name="nombre_empresa" value="{{ old('_form') === 'proveedor-nuevo' ? old('nombre_empresa') : '' }}" class="form-control" maxlength="100" placeholder="Ej. Distribuidora Majo S.A.C." required>
-            </div>
-            <div class="col-md-4"><button type="submit" class="btn btn-success w-100">+ Registrar proveedor</button></div>
-        </form>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-primary rounded-3 px-3 py-2" data-bs-toggle="offcanvas" data-bs-target="#supplier-create-panel" aria-controls="supplier-create-panel">+ Nuevo proveedor</button>
+        <button type="button" class="btn btn-primary rounded-3 px-3 py-2" data-bs-toggle="offcanvas" data-bs-target="#supplier-price-panel" aria-controls="supplier-price-panel">Registrar precio</button>
+        <a href="{{ route('proveedores.asignar-producto') }}" class="btn btn-outline-secondary rounded-3 px-3 py-2">Asignar producto</a>
     </div>
 </div>
-<div class="card mb-4" data-live-region="suppliers">
+<div class="card data-table-card mb-4" data-live-region="suppliers">
     <div class="card-header list-card-header">
         <h2 class="h6 mb-0">Proveedores registrados</h2>
         <div class="list-search-wrap" data-list-search>
@@ -31,12 +21,12 @@
             <span class="list-search-count" data-search-count></span>
         </div>
     </div>
-    <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
-        <thead class="table-dark"><tr><th>ID</th><th>Empresa</th><th>Acciones</th></tr></thead>
+    <div class="table-responsive"><table class="table table-hover data-table align-middle">
+        <thead class="data-table-head"><tr><th>ID</th><th>Empresa</th><th class="text-end">Acciones</th></tr></thead>
         <tbody>
             @forelse ($proveedores as $proveedor)
                 <tr data-search-row data-search-value="{{ $proveedor->id_proveedor }} {{ $proveedor->nombre_empresa }}" data-suggestion-label="{{ $proveedor->nombre_empresa }} · #{{ $proveedor->id_proveedor }}">
-                    <td>{{ $proveedor->id_proveedor }}</td><td>{{ $proveedor->nombre_empresa }}</td>
+                    <td class="data-table-secondary">#{{ $proveedor->id_proveedor }}</td><td class="data-table-primary">{{ $proveedor->nombre_empresa }}</td>
                     <td><div class="action-buttons">
                         <form action="{{ route('proveedores.update', $proveedor) }}" method="POST" class="d-flex flex-wrap gap-2">
                             @csrf
@@ -44,27 +34,30 @@
                             <input type="hidden" name="_form" value="proveedor-{{ $proveedor->id_proveedor }}">
                             <label class="visually-hidden" for="empresa-{{ $proveedor->id_proveedor }}">Nombre de {{ $proveedor->nombre_empresa }}</label>
                             <input id="empresa-{{ $proveedor->id_proveedor }}" type="text" name="nombre_empresa" class="form-control inline-name" maxlength="100" value="{{ old('_form') === 'proveedor-'.$proveedor->id_proveedor ? old('nombre_empresa') : $proveedor->nombre_empresa }}" required>
-                            <button type="submit" class="btn btn-warning btn-sm">Guardar cambios</button>
+                            <button type="submit" class="btn-icon btn-icon-success" aria-label="Guardar cambios de {{ $proveedor->nombre_empresa }}" title="Guardar cambios"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
                         </form>
                         <form action="{{ route('proveedores.destroy', $proveedor) }}" method="POST" data-confirm="¿Eliminar este proveedor y sus precios?">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            <button type="submit" class="btn-icon btn-icon-danger" aria-label="Eliminar {{ $proveedor->nombre_empresa }}" title="Eliminar"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                         </form>
                     </div></td>
                 </tr>
             @empty
-                <tr><td colspan="3" class="text-center text-muted py-4">No hay proveedores registrados.</td></tr>
+                <tr><td colspan="3" class="table-empty-cell">@include('components.empty-state', [
+                    'title' => 'Todavía no tienes proveedores',
+                    'description' => 'Registra tus proveedores para relacionarlos con productos y precios de compra.',
+                    'actionUrl' => '#supplier-create-panel',
+                    'actionLabel' => 'Registrar proveedor',
+                    'actionTarget' => 'supplier-create-panel',
+                    'actionTargetType' => 'offcanvas',
+                ])</td></tr>
             @endforelse
             <tr data-search-empty hidden><td colspan="3" class="text-center text-muted py-4">No encontramos proveedores que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>
-<div class="card mb-4">
-    <div class="card-header"><h2 class="h6 mb-0">Registrar precio de proveedor</h2></div>
-    <div class="card-body">@include('proveedores._precio-form', compact('productos', 'proveedores'))</div>
-</div>
-<div class="card" data-live-region="supplier-prices">
+<div class="card data-table-card" data-live-region="supplier-prices">
     <div class="card-header list-card-header">
         <h2 class="h6 mb-0">Precios por proveedor</h2>
         <div class="list-search-wrap" data-list-search>
@@ -74,13 +67,13 @@
             <span class="list-search-count" data-search-count></span>
         </div>
     </div>
-    <div class="table-responsive"><table class="table table-bordered table-hover align-middle">
-        <thead class="table-dark"><tr><th>Producto</th><th>Proveedor</th><th>Precio de compra</th><th>Acciones</th></tr></thead>
+    <div class="table-responsive"><table class="table table-hover data-table align-middle">
+        <thead class="data-table-head"><tr><th>Producto</th><th>Proveedor</th><th>Precio de compra</th><th class="text-end">Acciones</th></tr></thead>
         <tbody>
             @forelse ($precios as $precio)
                 <tr data-search-row data-search-value="{{ $precio->producto->nombre_producto }} {{ $precio->proveedor->nombre_empresa }} {{ $precio->precio_compra }}" data-suggestion-label="{{ $precio->producto->nombre_producto }} · {{ $precio->proveedor->nombre_empresa }}">
-                    <td>{{ $precio->producto->nombre_producto }}</td><td>{{ $precio->proveedor->nombre_empresa }}</td>
-                    <td class="text-nowrap">S/ {{ number_format((float) $precio->precio_compra, 2) }}</td>
+                    <td class="data-table-primary">{{ $precio->producto->nombre_producto }}</td><td>{{ $precio->proveedor->nombre_empresa }}</td>
+                    <td class="data-table-number">S/ {{ number_format((float) $precio->precio_compra, 2) }}</td>
                     <td><div class="action-buttons">
                         <form action="{{ route('proveedores.precios.update', [$precio->id_proveedor, $precio->id_producto]) }}" method="POST" class="d-flex flex-wrap gap-2">
                             @csrf
@@ -88,20 +81,57 @@
                             <input type="hidden" name="_form" value="precio-{{ $precio->id_producto }}-{{ $precio->id_proveedor }}">
                             <label class="visually-hidden" for="precio-{{ $precio->id_producto }}-{{ $precio->id_proveedor }}">Precio de compra de {{ $precio->producto->nombre_producto }} a {{ $precio->proveedor->nombre_empresa }}</label>
                             <input id="precio-{{ $precio->id_producto }}-{{ $precio->id_proveedor }}" type="number" name="precio_compra" class="form-control inline-price" min="0" max="99999999.99" step="0.01" value="{{ old('_form') === 'precio-'.$precio->id_producto.'-'.$precio->id_proveedor ? old('precio_compra') : $precio->precio_compra }}" required>
-                            <button type="submit" class="btn btn-warning btn-sm">Actualizar</button>
+                            <button type="submit" class="btn-icon btn-icon-success" aria-label="Actualizar precio de {{ $precio->producto->nombre_producto }}" title="Guardar precio"><i class="bi bi-check-lg" aria-hidden="true"></i></button>
                         </form>
                         <form action="{{ route('proveedores.precios.destroy', [$precio->id_proveedor, $precio->id_producto]) }}" method="POST" data-confirm="¿Eliminar este precio?">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                            <button type="submit" class="btn-icon btn-icon-danger" aria-label="Eliminar precio de {{ $precio->producto->nombre_producto }}" title="Eliminar"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                         </form>
                     </div></td>
                 </tr>
             @empty
-                <tr><td colspan="4" class="text-center text-muted py-4">No hay precios de proveedores registrados.</td></tr>
+                <tr><td colspan="4" class="table-empty-cell">@include('components.empty-state', [
+                    'title' => 'Aún no hay precios asignados',
+                    'description' => 'Asigna un producto y proveedor para empezar a comparar costos.',
+                    'actionUrl' => route('proveedores.asignar-producto'),
+                    'actionLabel' => 'Asignar producto',
+                ])</td></tr>
             @endforelse
             <tr data-search-empty hidden><td colspan="4" class="text-center text-muted py-4">No encontramos precios que coincidan.</td></tr>
         </tbody>
     </table></div>
 </div>
+<div class="offcanvas offcanvas-end admin-form-panel" tabindex="-1" id="supplier-create-panel" aria-labelledby="supplier-create-title">
+    <div class="offcanvas-header border-bottom">
+        <div><p class="dashboard-panel-kicker mb-1">PROVEEDORES</p><h2 class="offcanvas-title h5 fw-bold" id="supplier-create-title">Nuevo proveedor</h2></div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form action="{{ route('proveedores.store') }}" method="POST">
+            @csrf
+            <input type="hidden" name="_form" value="proveedor-nuevo">
+            <label for="nombre_empresa" class="form-label">Nombre de la empresa</label>
+            <input id="nombre_empresa" type="text" name="nombre_empresa" value="{{ old('_form') === 'proveedor-nuevo' ? old('nombre_empresa') : '' }}" class="form-control mb-3" maxlength="100" placeholder="Ej. Distribuidora Majo S.A.C." required>
+            <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 w-100">Registrar proveedor</button>
+        </form>
+    </div>
+</div>
+<div class="offcanvas offcanvas-end admin-form-panel" tabindex="-1" id="supplier-price-panel" aria-labelledby="supplier-price-title">
+    <div class="offcanvas-header border-bottom">
+        <div><p class="dashboard-panel-kicker mb-1">COSTOS</p><h2 class="offcanvas-title h5 fw-bold" id="supplier-price-title">Precio de proveedor</h2></div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+        @include('proveedores._precio-form', compact('productos', 'proveedores'))
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+@if ($errors->any() && old('_form') === 'proveedor-nuevo')
+    <script>document.addEventListener('DOMContentLoaded', () => window.appFeedbackReady.then(() => bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('supplier-create-panel')).show()));</script>
+@elseif ($errors->any() && old('_form') === 'precio-nuevo')
+    <script>document.addEventListener('DOMContentLoaded', () => window.appFeedbackReady.then(() => bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('supplier-price-panel')).show()));</script>
+@endif
+@endpush

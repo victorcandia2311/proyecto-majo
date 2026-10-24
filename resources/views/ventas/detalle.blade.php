@@ -18,22 +18,22 @@
         <div class="col-md-3"><dt>Método de pago</dt><dd>{{ $venta->metodo_pago }}</dd></div>
     </dl>
 </div></div>
-<div class="card">
+<div class="card data-table-card">
     <div class="card-header"><h2 class="h6 mb-0">Productos vendidos</h2></div>
-    <div class="table-responsive"><table class="table table-bordered align-middle">
-        <thead class="table-dark"><tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
+    <div class="table-responsive"><table class="table data-table align-middle">
+        <thead class="data-table-head"><tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th></tr></thead>
         <tbody>
             @forelse ($detalles as $detalle)
                 <tr>
-                    <td>{{ $detalle->producto?->nombre_producto ?? 'Producto eliminado' }}</td><td>{{ $detalle->cantidad }}</td>
-                    <td class="text-nowrap">S/ {{ number_format((float) $detalle->precio_unitario, 2) }}</td>
-                    <td class="text-nowrap">S/ {{ number_format($detalle->cantidad * (float) $detalle->precio_unitario, 2) }}</td>
+                    <td class="data-table-primary">{{ $detalle->producto?->nombre_producto ?? 'Producto eliminado' }}</td><td class="data-table-number">{{ $detalle->cantidad }}</td>
+                    <td class="data-table-number">S/ {{ number_format((float) $detalle->precio_unitario, 2) }}</td>
+                    <td class="data-table-number">S/ {{ number_format($detalle->cantidad * (float) $detalle->precio_unitario, 2) }}</td>
                 </tr>
             @empty
                 <tr><td colspan="4" class="text-center text-muted py-4">Esta venta no tiene detalles registrados.</td></tr>
             @endforelse
         </tbody>
-        <tfoot><tr><th colspan="3" class="text-end">TOTAL</th><th class="text-nowrap">S/ {{ number_format((float) $venta->total_venta, 2) }}</th></tr></tfoot>
+        <tfoot><tr><th colspan="3" class="text-end">TOTAL</th><th class="data-table-number">S/ {{ number_format((float) $venta->total_venta, 2) }}</th></tr></tfoot>
     </table></div>
 </div>
 @endsection

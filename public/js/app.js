@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const normalizeSelectSearch = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('es-PE').trim();
     let customSelectId = 0;
 
-    document.querySelectorAll('select.form-select:not([multiple])').forEach((select) => {
+    document.querySelectorAll('select.form-select:not([multiple]):not([data-native-select])').forEach((select) => {
         customSelectId += 1;
 
         const wrapper = document.createElement('div');

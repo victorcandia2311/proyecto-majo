@@ -32,6 +32,7 @@ Route::post('logout', [AuthController::class, 'destroy'])->middleware('auth')->n
 Route::middleware(['auth', 'auth.session', 'role:admin,empleado'])->group(function (): void {
     Route::middleware('role:admin')->group(function (): void {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');
+        Route::get('/dashboard/data', [DashboardController::class, 'data'])->name('dashboard.data');
 
         Route::resource('productos', ProductoController::class)->except('show')
             ->parameters(['productos' => 'producto']);

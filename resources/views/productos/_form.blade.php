@@ -2,6 +2,18 @@
     <div class="col-12"><label for="nombre_producto" class="form-label">Nombre del producto</label>
     <input type="text" id="nombre_producto" name="nombre_producto" class="form-control" value="{{ old('nombre_producto', $producto?->nombre_producto) }}" maxlength="150" required>
 </div>
+    <div class="col-12">
+        <label for="descripcion" class="form-label">Descripción</label>
+        <textarea id="descripcion" name="descripcion" class="form-control" rows="3" maxlength="2000">{{ old('descripcion', $producto?->descripcion) }}</textarea>
+    </div>
+    <div class="col-12">
+        <label for="imagen" class="form-label">Imagen del producto</label>
+        <input type="file" id="imagen" name="imagen" class="form-control" accept="image/jpeg,image/png,image/webp">
+        <div class="form-text">JPG, PNG o WebP. Máximo 3 MB.</div>
+        @if ($producto?->imagen_path)
+            <img src="{{ Illuminate\Support\Facades\Storage::url($producto->imagen_path) }}" alt="Imagen actual de {{ $producto->nombre_producto }}" class="mt-2 rounded" style="max-width: 140px; max-height: 120px; object-fit: cover;">
+        @endif
+    </div>
     @if ($producto)
         <div class="col-md-6"><label for="stock_actual" class="form-label">Stock actual</label>
             <input id="stock_actual" class="form-control" value="{{ $producto->stock_actual }}" disabled>

@@ -12,8 +12,10 @@ use App\Models\Venta;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ViewErrorBag;
 
 beforeEach(function () {
@@ -51,6 +53,8 @@ beforeEach(function () {
     Schema::create('producto', function (Blueprint $table) {
         $table->increments('id_producto');
         $table->string('nombre_producto', 150);
+        $table->text('descripcion')->nullable();
+        $table->string('imagen_path')->nullable();
         $table->integer('stock_actual')->default(0);
         $table->integer('stock_minimo_alerta')->default(10);
         $table->decimal('precio_venta', 10, 2);
@@ -122,8 +126,19 @@ test('module routes return their expected view data', function (string $routeNam
     ['asistencia.index', 'asistencia.index', ['empleados', 'asistencias', 'empleadosTemporales']],
     ['ventas.index', 'ventas.index', ['productos', 'ventas', 'carrito']],
     ['ventas.nueva', 'ventas.nueva', ['productos', 'carrito', 'totalCarrito']],
-    ['dashboard.index', 'dashboard.index', ['resumen', 'rankingProductos', 'ventasPorMes', 'ventasPorMetodo']],
+    ['dashboard.index', 'dashboard.index', []],
 ]);
+
+test('employee sales screen uses the responsive visual point of sale', function () {
+    Producto::factory()->create(['stock_actual' => 4, 'descripcion' => 'Edición especial']);
+    $this->actingAs(Empleado::factory()->withAccess('empleado')->make(['id_empleado' => 42]))
+        ->get(route('ventas.index'))
+        ->assertOk()
+        ->assertViewIs('ventas.pos')
+        ->assertSee('pos-product-grid', false)
+        ->assertSee('Edición especial')
+        ->assertSee('pos-checkout-form', false);
+});
 
 test('employee registration and listing do not show employee type', function () {
     $this->get(route('empleados.index'))
@@ -226,6 +241,33 @@ test('products can be created edited and archived without changing stock through
     $this->delete(route('productos.destroy', $producto))->assertRedirectToRoute('productos.index');
     $this->assertSoftDeleted($producto);
     expect(Producto::find($producto->getKey()))->toBeNull();
+});
+
+test('product catalog accepts descriptions and safely replaces public images', function () {
+    Storage::fake('public');
+    $data = Producto::factory()->raw();
+
+    $this->post(route('productos.store'), [
+        ...$data,
+        'descripcion' => 'Café tostado de origen local.',
+        'imagen' => UploadedFile::fake()->image('cafe.jpg'),
+    ])->assertRedirectToRoute('productos.index');
+
+    $producto = Producto::sole();
+    $previousImage = $producto->imagen_path;
+    expect($producto->descripcion)->toBe('Café tostado de origen local.');
+    Storage::disk('public')->assertExists($previousImage);
+
+    $this->put(route('productos.update', $producto), [
+        ...$data,
+        'descripcion' => 'Café molido de origen local.',
+        'imagen' => UploadedFile::fake()->image('cafe-nuevo.png'),
+    ])->assertRedirectToRoute('productos.index');
+
+    expect($producto->fresh()->descripcion)->toBe('Café molido de origen local.');
+    expect($producto->fresh()->imagen_path)->not->toBe($previousImage);
+    Storage::disk('public')->assertMissing($previousImage);
+    Storage::disk('public')->assertExists($producto->fresh()->imagen_path);
 });
 
 test('products with sales or inventory history can be archived without deleting that history', function (string $relatedClass) {
@@ -421,6 +463,48 @@ test('checkout uses current product prices records details and stock exits then 
     $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Yape'])
         ->assertSessionHasErrors(['carrito' => 'El carrito está vacío.']);
     $this->assertDatabaseCount('venta', 1);
+});
+
+test('JSON point of sale checkout uses database prices and updates inventory without a session cart', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 4, 'precio_venta' => '2.75']);
+    $this->actingAs(Empleado::factory()->withAccess('empleado')->make(['id_empleado' => 43]));
+
+    $response = $this->postJson(route('ventas.confirmar'), [
+        'cliente_nombre' => 'Cliente POS',
+        'metodo_pago' => 'Efectivo',
+        'items' => [['id_producto' => $producto->getKey(), 'cantidad' => 2, 'precio' => 0.01]],
+    ])->assertCreated()->assertJsonPath('total_venta', '5.50');
+
+    $venta = Venta::sole();
+    expect($response->json('venta_id'))->toBe($venta->getKey());
+    expect($response->json('recibo_url'))->toBe(route('ventas.pdf', $venta));
+    expect($producto->fresh()->stock_actual)->toBe(2);
+    $this->assertDatabaseHas('detalle_venta', [
+        'id_venta' => $venta->getKey(),
+        'id_producto' => $producto->getKey(),
+        'cantidad' => 2,
+        'precio_unitario' => '2.75',
+    ]);
+    $this->assertDatabaseHas('movimiento_inventario', [
+        'id_producto' => $producto->getKey(),
+        'cantidad' => 2,
+        'tipo_movimiento' => 'SALIDA',
+    ]);
+    $response->assertSessionMissing('carrito');
+});
+
+test('JSON point of sale checkout rejects insufficient stock without saving a sale', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 1]);
+
+    $this->postJson(route('ventas.confirmar'), [
+        'metodo_pago' => 'Yape',
+        'items' => [['id_producto' => $producto->getKey(), 'cantidad' => 2]],
+    ])->assertUnprocessable()->assertJsonValidationErrors('carrito');
+
+    expect($producto->fresh()->stock_actual)->toBe(1);
+    $this->assertDatabaseEmpty('venta');
+    $this->assertDatabaseEmpty('detalle_venta');
+    $this->assertDatabaseEmpty('movimiento_inventario');
 });
 
 test('checkout rolls back all lines when a later product is out of stock or removed', function (bool $removed) {
@@ -672,15 +756,15 @@ test('dashboard totals distinguish current previous and future months and per-pr
     Venta::factory()->create(['fecha_hora' => '2026-08-31 23:59:59', 'total_venta' => '20.00']);
     Venta::factory()->create(['fecha_hora' => '2026-10-01 00:00:00', 'total_venta' => '500.00']);
 
-    $response = $this->get(route('dashboard.index'))->assertOk();
+    $response = $this->getJson(route('dashboard.data'))->assertOk();
 
-    expect($response['resumen'])->toEqual(['cantidad_ventas' => 1, 'ingresos' => 30]);
-    expect($response['productosVendidos'])->toBe(['productos_vendidos' => 3]);
-    expect($response['variacionVentas']['variacion'])->toEqual(50);
-    expect($response['productoMasVendido']->getKey())->toBe($producto->getKey());
-    expect($response['cantidadProductosStockBajo'])->toBe(1);
-    expect($response['ventasPorMetodo']->first()['porcentaje'])->toEqual(100);
-    expect($response['ventasPorMes']->pluck('mes')->all())->toBe(['2026-08', '2026-09', '2026-10']);
+    expect($response->json('resumen'))->toEqual(['cantidad_ventas' => 1, 'ingresos' => 30, 'productos_vendidos' => 3]);
+    expect($response->json('variacion.porcentaje'))->toEqual(50);
+    expect($response->json('ranking.0.id'))->toBe($producto->getKey());
+    expect($response->json('cantidad_stock_bajo'))->toBe(1);
+    expect($response->json('metodos.0.porcentaje'))->toEqual(100);
+    expect(collect($response->json('meses'))->pluck('mes')->all())->toHaveCount(12);
+    expect(collect($response->json('meses'))->pluck('mes')->last())->toBe('2026-09');
 });
 
 test('dashboard has no HTML tables and limits the product chart to five items', function () {
@@ -690,15 +774,18 @@ test('dashboard has no HTML tables and limits the product chart to five items', 
         DetalleVenta::factory()->for($venta, 'venta')->for($producto, 'producto')->create(['cantidad' => $quantity]);
     }
 
-    $response = $this->get(route('dashboard.index'))->assertOk()
+    $this->get(route('dashboard.index'))->assertOk()
         ->assertDontSee('<table', false)
         ->assertSee('Resumen General')
         ->assertDontSee('GESTIÓN EMPRESARIAL')
         ->assertSee('Evolución de Ingresos')
         ->assertSee('Métodos de Pago')
-        ->assertSee('Top 5 Productos Más Vendidos');
+        ->assertSee('Top 5 Productos Más Vendidos')
+        ->assertSee('dashboard-skeleton', false)
+        ->assertSee('data-dashboard-endpoint', false)
+        ->assertDontSee('data-live-lists', false);
 
-    expect($response['rankingProductos'])->toHaveCount(5);
+    $this->getJson(route('dashboard.data'))->assertOk()->assertJsonCount(5, 'ranking');
 });
 
 test('attendance page displays a fallback for a record without a related employee', function () {
@@ -727,7 +814,6 @@ test('live pages expose automatic refresh regions and searchable suggestions', f
     }
 
 })->with([
-    ['dashboard.index', 'dashboard-metrics', false],
     ['productos.index', 'products', true],
     ['inventario.index', 'inventory-products', true],
     ['inventario.index', 'inventory-movements', true],

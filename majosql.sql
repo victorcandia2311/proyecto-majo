@@ -92,9 +92,12 @@ CREATE TABLE IF NOT EXISTS "movimiento_inventario" (
 CREATE TABLE IF NOT EXISTS "producto" (
 	"id_producto" SERIAL NOT NULL,
 	"nombre_producto" VARCHAR(150) NOT NULL,
+	"descripcion" TEXT NULL,
+	"imagen_path" VARCHAR(255) NULL,
 	"stock_actual" INTEGER NOT NULL DEFAULT 0,
 	"stock_minimo_alerta" INTEGER NOT NULL DEFAULT 10,
 	"precio_venta" NUMERIC(10,2) NOT NULL,
+	"deleted_at" TIMESTAMP NULL,
 	PRIMARY KEY ("id_producto")
 );
 

@@ -6,6 +6,7 @@ use App\Http\Requests\ProductoRequest;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ProductoController extends Controller
@@ -24,9 +25,16 @@ class ProductoController extends Controller
 
     public function store(ProductoRequest $request): RedirectResponse
     {
-        Producto::create($request->validated());
+        $data = $request->validated();
+        unset($data['imagen']);
 
-        return to_route('productos.index');
+        if ($request->hasFile('imagen')) {
+            $data['imagen_path'] = $request->file('imagen')->store('productos', 'public');
+        }
+
+        Producto::create($data);
+
+        return to_route('productos.index')->with('feedback_success', 'Producto registrado correctamente.');
     }
 
     public function edit(Producto $producto): View
@@ -36,9 +44,22 @@ class ProductoController extends Controller
 
     public function update(ProductoRequest $request, Producto $producto): RedirectResponse
     {
-        $producto->update($request->validated());
+        $data = $request->validated();
+        unset($data['imagen']);
 
-        return to_route('productos.index');
+        if ($request->hasFile('imagen')) {
+            $previousImage = $producto->imagen_path;
+            $data['imagen_path'] = $request->file('imagen')->store('productos', 'public');
+            $producto->update($data);
+
+            if ($previousImage !== null) {
+                Storage::disk('public')->delete($previousImage);
+            }
+        } else {
+            $producto->update($data);
+        }
+
+        return to_route('productos.index')->with('feedback_success', 'Producto actualizado correctamente.');
     }
 
     public function destroy(Producto $producto): RedirectResponse

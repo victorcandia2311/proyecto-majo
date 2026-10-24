@@ -175,13 +175,13 @@ test('administrator login rejects seller username even when seller has a passwor
 
 test('administrator can request and verify a code before creating an account', function () {
     Mail::fake();
-    config(['auth.admin_registration_code_email' => 'victorcandia2311@gmail.com']);
+    config(['auth.admin_registration_code_email' => 'admin-test@example.com']);
     $this->postJson(route('admin.register.code'))->assertOk()->assertJsonStructure(['status']);
     $codigo = null;
     Mail::assertSent(CodigoRegistroAdministrador::class, function (CodigoRegistroAdministrador $mail) use (&$codigo): bool {
         $codigo = $mail->codigo;
 
-        return $mail->hasTo('victorcandia2311@gmail.com') && preg_match('/^[0-9]{6}$/', $mail->codigo) === 1;
+        return $mail->hasTo('admin-test@example.com') && preg_match('/^[0-9]{6}$/', $mail->codigo) === 1;
     });
 
     $this->postJson(route('admin.register.code.verify'), ['codigo_verificacion' => '000000'])

@@ -25,6 +25,8 @@ class Producto extends Model
     /** @var list<string> */
     protected $fillable = [
         'nombre_producto',
+        'descripcion',
+        'imagen_path',
         'stock_actual',
         'stock_minimo_alerta',
         'precio_venta',

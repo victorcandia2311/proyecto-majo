@@ -25,11 +25,11 @@
     </div>
 </div>
 
-<div class="card mb-4">
+<div class="card data-table-card mb-4">
     <div class="card-header"><h2 class="h6 mb-0">Empleados</h2></div>
     <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle mb-0">
-            <thead class="table-dark">
+        <table class="table table-hover data-table align-middle mb-0">
+            <thead class="data-table-head">
                 <tr><th>Empleado</th><th>Asistencia</th><th>Hora de ingreso</th><th>Hora de salida</th></tr>
             </thead>
             <tbody>
@@ -39,27 +39,32 @@
                         <td>{{ $empleado->nombres }}</td>
                         <td>
                             @if ($asistencia)
-                                <span class="badge bg-success">Asistió</span>
+                                <span class="data-badge data-badge-success"><i class="bi bi-check-circle" aria-hidden="true"></i>Asistió</span>
                             @else
-                                <span class="badge bg-danger">No asistió</span>
+                                <span class="data-badge data-badge-danger"><i class="bi bi-x-circle" aria-hidden="true"></i>No asistió</span>
                             @endif
                         </td>
-                        <td class="text-nowrap">{{ $asistencia?->hora_ingreso ?? '—' }}</td>
-                        <td class="text-nowrap">{{ $asistencia?->hora_salida ?? '—' }}</td>
+                        <td class="text-nowrap data-table-number">{{ $asistencia?->hora_ingreso ?? '—' }}</td>
+                        <td class="text-nowrap data-table-number">{{ $asistencia?->hora_salida ?? '—' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="text-center text-muted py-4">No hay empleados registrados.</td></tr>
+                    <tr><td colspan="4" class="table-empty-cell">@include('components.empty-state', [
+                        'title' => 'No hay empleados registrados',
+                        'description' => 'Registra al equipo para consultar sus asistencias diarias.',
+                        'actionUrl' => route('empleados.index'),
+                        'actionLabel' => 'Ir a empleados',
+                    ])</td></tr>
                 @endforelse
             </tbody>
         </table>
     </div>
 </div>
 
-<div class="card">
+<div class="card data-table-card">
     <div class="card-header"><h2 class="h6 mb-0">Empleados temporales</h2></div>
     <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle mb-0">
-            <thead class="table-dark">
+        <table class="table table-hover data-table align-middle mb-0">
+            <thead class="data-table-head">
                 <tr><th>Empleado temporal</th><th>Hora de ingreso</th><th>Hora de salida</th></tr>
             </thead>
             <tbody>
@@ -70,7 +75,12 @@
                         <td class="text-nowrap">{{ $empleadoTemporal->hora_salida ?? '—' }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="3" class="text-center text-muted py-4">No hay asistencias temporales registradas para esta fecha.</td></tr>
+                    <tr><td colspan="3" class="table-empty-cell">@include('components.empty-state', [
+                        'title' => 'Sin marcaciones temporales para esta fecha',
+                        'description' => 'Cambia la fecha o registra la asistencia temporal.',
+                        'actionUrl' => route('asistencia.index'),
+                        'actionLabel' => 'Ir a asistencia',
+                    ])</td></tr>
                 @endforelse
             </tbody>
         </table>

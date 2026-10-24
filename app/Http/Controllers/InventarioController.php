@@ -46,6 +46,6 @@ class InventarioController extends Controller
             ]);
         });
 
-        return to_route('inventario.index');
+        return to_route('inventario.index')->with('feedback_success', 'Inventario actualizado correctamente.');
     }
 }

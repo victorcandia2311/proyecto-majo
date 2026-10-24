@@ -29,20 +29,20 @@
         @endif
     </div>
 </div>
-<div class="card mb-4">
+<div class="card data-table-card mb-4">
     <div class="card-header"><h2 class="h6 mb-0">Detalle de la venta</h2></div>
-    <div class="table-responsive"><table class="table table-bordered align-middle">
-        <thead class="table-dark"><tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th><th>Acción</th></tr></thead>
+    <div class="table-responsive"><table class="table data-table align-middle">
+        <thead class="data-table-head"><tr><th>Producto</th><th>Cantidad</th><th>Precio unitario</th><th>Subtotal</th><th class="text-end">Acción</th></tr></thead>
         <tbody>
             @forelse ($carrito as $item)
                 <tr>
-                    <td>{{ $item['nombre_producto'] }}</td><td>{{ $item['cantidad'] }}</td>
-                    <td class="text-nowrap">S/ {{ number_format((float) $item['precio_unitario'], 2) }}</td>
-                    <td class="text-nowrap">S/ {{ number_format($item['cantidad'] * (float) $item['precio_unitario'], 2) }}</td>
+                    <td class="data-table-primary">{{ $item['nombre_producto'] }}</td><td class="data-table-number">{{ $item['cantidad'] }}</td>
+                    <td class="data-table-number">S/ {{ number_format((float) $item['precio_unitario'], 2) }}</td>
+                    <td class="data-table-number">S/ {{ number_format($item['cantidad'] * (float) $item['precio_unitario'], 2) }}</td>
                     <td><form action="{{ route('ventas.carrito.eliminar', $item['id_producto']) }}" method="POST" data-confirm="¿Eliminar este producto de la venta?">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                        <button type="submit" class="btn-icon btn-icon-danger" aria-label="Quitar {{ $item['nombre_producto'] }} de la venta" title="Quitar producto"><i class="bi bi-trash3" aria-hidden="true"></i></button>
                     </form></td>
                 </tr>
             @empty
@@ -50,7 +50,7 @@
             @endforelse
         </tbody>
         @if (count($carrito) > 0)
-            <tfoot><tr><th colspan="3" class="text-end">TOTAL ESTIMADO</th><td colspan="2" class="fw-bold">S/ {{ number_format($totalCarrito, 2) }}</td></tr></tfoot>
+            <tfoot><tr><th colspan="3" class="text-end">TOTAL ESTIMADO</th><td colspan="2" class="data-table-number">S/ {{ number_format($totalCarrito, 2) }}</td></tr></tfoot>
         @endif
     </table></div>
     @if (count($carrito) > 0)

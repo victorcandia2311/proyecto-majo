@@ -160,7 +160,6 @@ class AuthController extends Controller
         $empleado->forceFill([
             ...$data,
             'documento_identidad' => null,
-            'email' => null,
             'es_eventual' => false,
             'rol' => 'admin',
         ])->save();

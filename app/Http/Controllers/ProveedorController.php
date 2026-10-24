@@ -38,7 +38,7 @@ class ProveedorController extends Controller
             'nombre_empresa' => ['required', 'string', 'max:100'],
         ]));
 
-        return to_route('proveedores.index');
+        return to_route('proveedores.index')->with('feedback_success', 'Proveedor registrado correctamente.');
     }
 
     public function update(Request $request, Proveedor $proveedor): RedirectResponse
@@ -47,14 +47,14 @@ class ProveedorController extends Controller
             'nombre_empresa' => ['required', 'string', 'max:100'],
         ]));
 
-        return to_route('proveedores.index');
+        return to_route('proveedores.index')->with('feedback_success', 'Proveedor actualizado correctamente.');
     }
 
     public function destroy(Proveedor $proveedor): RedirectResponse
     {
         $proveedor->delete();
 
-        return to_route('proveedores.index');
+        return to_route('proveedores.index')->with('feedback_success', 'Proveedor eliminado correctamente.');
     }
 
     public function guardarPrecio(Request $request): RedirectResponse
@@ -73,7 +73,7 @@ class ProveedorController extends Controller
             ]);
         }
 
-        return to_route('proveedores.index');
+        return to_route('proveedores.index')->with('feedback_success', 'Precio de proveedor registrado correctamente.');
     }
 
     public function actualizarPrecio(Request $request, Proveedor $proveedor, Producto $producto): RedirectResponse
@@ -85,13 +85,13 @@ class ProveedorController extends Controller
         $precio = $proveedor->productosProveedores()->where('id_producto', $producto->getKey())->firstOrFail();
         $precio->update($data);
 
-        return to_route('proveedores.index');
+        return to_route('proveedores.index')->with('feedback_success', 'Precio de proveedor actualizado correctamente.');
     }
 
     public function eliminarPrecio(Proveedor $proveedor, Producto $producto): RedirectResponse
     {
         $proveedor->productosProveedores()->where('id_producto', $producto->getKey())->firstOrFail()->delete();
 
-        return to_route('proveedores.index');
+        return to_route('proveedores.index')->with('feedback_success', 'Precio de proveedor eliminado correctamente.');
     }
 }

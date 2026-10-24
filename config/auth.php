@@ -4,7 +4,7 @@ use App\Models\Empleado;
 
 return [
 
-    'admin_registration_code_email' => 'victorcandia2311@gmail.com',
+    'admin_registration_code_email' => env('ADMIN_REGISTRATION_CODE_EMAIL', env('MAIL_FROM_ADDRESS', env('MAIL_USERNAME'))),
 
     /*
     |--------------------------------------------------------------------------

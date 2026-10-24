@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\Venta;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -18,11 +19,16 @@ class VentaController extends Controller
 {
     public function index(Request $request): View
     {
+        $productos = Producto::where('stock_actual', '>', 0)->orderBy('nombre_producto')->get();
+
+        if (! auth()->user()->isAdmin()) {
+            return view('ventas.pos', compact('productos'));
+        }
+
         $filtros = $request->validate([
             'fecha_desde' => ['nullable', 'date_format:Y-m-d'],
             'fecha_hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:fecha_desde'],
         ]);
-        $productos = Producto::where('stock_actual', '>', 0)->orderBy('nombre_producto')->get();
         $fechaDesde = $filtros['fecha_desde'] ?? null;
         $fechaHasta = $filtros['fecha_hasta'] ?? null;
         $ventasQuery = Venta::query()
@@ -49,6 +55,11 @@ class VentaController extends Controller
     public function create(Request $request): View
     {
         $productos = Producto::where('stock_actual', '>', 0)->orderBy('nombre_producto')->get();
+
+        if (! auth()->user()->isAdmin()) {
+            return view('ventas.pos', compact('productos'));
+        }
+
         $carrito = $request->session()->get('carrito', []);
         $totalCarrito = collect($carrito)->sum(fn (array $item): float => $item['cantidad'] * (float) $item['precio_unitario']);
 
@@ -94,24 +105,33 @@ class VentaController extends Controller
         return to_route('ventas.index');
     }
 
-    public function confirmar(Request $request): RedirectResponse
+    public function confirmar(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'cliente_nombre' => ['nullable', 'string', 'max:100'],
             'cliente_documento' => ['nullable', 'regex:/^(?:[0-9]{8}|[0-9]{11})$/'],
             'metodo_pago' => ['required', Rule::in(['Efectivo', 'Yape', 'Plin', 'Tarjeta'])],
         ]);
-        $carrito = $request->session()->get('carrito', []);
+        $checkoutJson = $request->expectsJson();
+        $carrito = $checkoutJson
+            ? $request->validate([
+                'items' => ['required', 'array', 'min:1', 'max:100'],
+                'items.*.id_producto' => ['required', 'integer', 'distinct', Rule::exists(Producto::class, 'id_producto')],
+                'items.*.cantidad' => ['required', 'integer', 'min:1', 'max:2147483647'],
+            ])['items']
+            : $request->session()->get('carrito', []);
 
         if (empty($carrito)) {
             throw ValidationException::withMessages(['carrito' => 'El carrito está vacío.']);
         }
 
-        Validator::make(['carrito' => $carrito], [
-            'carrito' => ['required', 'array'],
-            'carrito.*.id_producto' => ['required', 'integer', 'distinct'],
-            'carrito.*.cantidad' => ['required', 'integer', 'min:1', 'max:2147483647'],
-        ])->validate();
+        if (! $checkoutJson) {
+            Validator::make(['carrito' => $carrito], [
+                'carrito' => ['required', 'array'],
+                'carrito.*.id_producto' => ['required', 'integer', 'distinct'],
+                'carrito.*.cantidad' => ['required', 'integer', 'min:1', 'max:2147483647'],
+            ])->validate();
+        }
 
         $venta = DB::transaction(function () use ($data, $carrito): Venta {
             $productos = Producto::whereIn('id_producto', array_column($carrito, 'id_producto'))
@@ -157,6 +177,16 @@ class VentaController extends Controller
 
             return $venta;
         });
+
+        if ($checkoutJson) {
+            return response()->json([
+                'message' => 'Venta registrada correctamente.',
+                'venta_id' => $venta->getKey(),
+                'total_venta' => $venta->total_venta,
+                'detalle_url' => route('ventas.show', $venta),
+                'recibo_url' => route('ventas.pdf', $venta),
+            ], 201);
+        }
 
         $request->session()->put('carrito', []);
 

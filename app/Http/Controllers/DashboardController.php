@@ -5,73 +5,111 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\Venta;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function index(): View
     {
+        return view('dashboard.index');
+    }
+
+    public function data(): JsonResponse
+    {
         $inicioMes = now()->startOfMonth();
         $finMes = $inicioMes->copy()->addMonth();
+        $inicioHistorial = $inicioMes->copy()->subMonths(11);
         $mesActual = $inicioMes->format('Y-m');
         $mesAnterior = $inicioMes->copy()->subMonth()->format('Y-m');
-        $resumen = ['cantidad_ventas' => 0, 'ingresos' => 0];
-        $productosVendidos = ['productos_vendidos' => 0];
-        $totalesPorMes = [];
-        $unidadesPorMes = [];
-        $metodos = [];
+        $monthExpression = match (DB::connection()->getDriverName()) {
+            'pgsql' => "to_char(venta.fecha_hora, 'YYYY-MM')",
+            'mysql' => "DATE_FORMAT(venta.fecha_hora, '%Y-%m')",
+            default => "strftime('%Y-%m', venta.fecha_hora)",
+        };
 
-        foreach (Venta::select(['id_venta', 'fecha_hora', 'total_venta', 'metodo_pago'])
-            ->withSum('detalles as unidades_vendidas', 'cantidad')->lazyById(500, 'id_venta') as $venta) {
-            $mes = $venta->fecha_hora->format('Y-m');
-            $importe = (float) $venta->total_venta;
-            $unidades = (int) $venta->unidades_vendidas;
-            $totalesPorMes[$mes] = ($totalesPorMes[$mes] ?? 0) + $importe;
-            $unidadesPorMes[$mes] = ($unidadesPorMes[$mes] ?? 0) + $unidades;
+        $monthlySales = Venta::query()
+            ->where('venta.fecha_hora', '>=', $inicioHistorial)
+            ->where('venta.fecha_hora', '<', $finMes)
+            ->selectRaw("$monthExpression as mes, SUM(venta.total_venta) as total, COUNT(*) as cantidad")
+            ->groupBy('mes')
+            ->get()
+            ->keyBy('mes');
+        $monthlyUnits = Venta::query()
+            ->join('detalle_venta', 'detalle_venta.id_venta', '=', 'venta.id_venta')
+            ->where('venta.fecha_hora', '>=', $inicioHistorial)
+            ->where('venta.fecha_hora', '<', $finMes)
+            ->selectRaw("$monthExpression as mes, SUM(detalle_venta.cantidad) as unidades")
+            ->groupBy('mes')
+            ->pluck('unidades', 'mes')
+            ->map(fn (string|int|float $units): int => (int) $units);
+        $months = collect(range(0, 11))->map(function (int $offset) use ($inicioHistorial, $monthlySales, $monthlyUnits): array {
+            $month = $inicioHistorial->copy()->addMonths($offset)->format('Y-m');
+            $monthlySale = $monthlySales->get($month);
 
-            if ($mes === $mesActual) {
-                $resumen['cantidad_ventas']++;
-                $resumen['ingresos'] += $importe;
-                $productosVendidos['productos_vendidos'] += $unidades;
-                $metodo = $venta->metodo_pago;
-                $metodos[$metodo] ??= ['metodo_pago' => $metodo, 'cantidad' => 0, 'total' => 0];
-                $metodos[$metodo]['cantidad']++;
-                $metodos[$metodo]['total'] += $importe;
-            }
-        }
-
-        $actual = $totalesPorMes[$mesActual] ?? 0;
-        $anterior = $totalesPorMes[$mesAnterior] ?? 0;
-        $variacionVentas = [
-            'ventas_actual' => $actual,
-            'ventas_anterior' => $anterior,
-            'variacion' => $anterior > 0 ? (($actual - $anterior) / $anterior) * 100 : ($actual > 0 ? 100 : 0),
-        ];
-        $ventasPorMes = collect($totalesPorMes)->sortKeys()
-            ->map(fn (float|int $total, string $mes): array => compact('mes', 'total'))->values();
-        $productosVendidosPorMes = collect($unidadesPorMes)->sortKeys()
-            ->map(fn (int $unidades, string $mes): array => ['mes' => $mes, 'unidades_vendidas' => $unidades])->values();
-        $ventasPorMetodo = collect($metodos)->map(fn (array $metodo): array => [
-            ...$metodo,
-            'porcentaje' => $actual > 0 ? round($metodo['total'] / $actual * 100, 2) : 0,
-        ])->sortByDesc('total')->values();
-
+            return [
+                'mes' => $month,
+                'total' => (float) ($monthlySale?->total ?? 0),
+                'cantidad_ventas' => (int) ($monthlySale?->cantidad ?? 0),
+                'unidades_vendidas' => $monthlyUnits->get($month, 0),
+            ];
+        });
+        $actual = (float) ($monthlySales->get($mesActual)?->total ?? 0);
+        $anterior = (float) ($monthlySales->get($mesAnterior)?->total ?? 0);
+        $metodos = Venta::query()
+            ->where('fecha_hora', '>=', $inicioMes)
+            ->where('fecha_hora', '<', $finMes)
+            ->selectRaw('metodo_pago, COUNT(*) as cantidad, SUM(total_venta) as total')
+            ->groupBy('metodo_pago')
+            ->orderByDesc('total')
+            ->get()
+            ->map(fn (Venta $venta): array => [
+                'metodo_pago' => $venta->metodo_pago,
+                'cantidad' => (int) $venta->cantidad,
+                'total' => (float) $venta->total,
+                'porcentaje' => $actual > 0 ? round((float) $venta->total / $actual * 100, 2) : 0,
+            ]);
         $ventasDelMes = fn (Builder $query): Builder => $query->whereHas(
             'venta',
             fn (Builder $query): Builder => $query->where('fecha_hora', '>=', $inicioMes)->where('fecha_hora', '<', $finMes),
         );
         $rankingProductos = Producto::whereHas('detallesVenta', $ventasDelMes)
             ->withSum(['detallesVenta as cantidad_vendida' => $ventasDelMes], 'cantidad')
-            ->orderByDesc('cantidad_vendida')->orderBy('id_producto')->limit(5)->get();
-        $productoMasVendido = $rankingProductos->first();
-        $productosStockBajo = Producto::whereColumn('stock_actual', '<=', 'stock_minimo_alerta')
-            ->orderBy('stock_actual')->get();
-        $cantidadProductosStockBajo = $productosStockBajo->count();
+            ->orderByDesc('cantidad_vendida')
+            ->orderBy('id_producto')
+            ->limit(5)
+            ->get(['id_producto', 'nombre_producto'])
+            ->map(fn (Producto $producto): array => [
+                'id' => $producto->getKey(),
+                'nombre' => $producto->nombre_producto,
+                'cantidad' => (int) $producto->cantidad_vendida,
+            ]);
+        $stockBajo = Producto::whereColumn('stock_actual', '<=', 'stock_minimo_alerta')
+            ->orderBy('stock_actual')
+            ->limit(5)
+            ->get(['id_producto', 'nombre_producto', 'stock_actual']);
 
-        return view('dashboard.index', compact(
-            'resumen', 'productosVendidos', 'productosVendidosPorMes', 'variacionVentas',
-            'productoMasVendido', 'rankingProductos', 'ventasPorMes', 'ventasPorMetodo',
-            'productosStockBajo', 'cantidadProductosStockBajo',
-        ));
+        return response()->json([
+            'resumen' => [
+                'cantidad_ventas' => Venta::where('fecha_hora', '>=', $inicioMes)->where('fecha_hora', '<', $finMes)->count(),
+                'ingresos' => $actual,
+                'productos_vendidos' => (int) $monthlyUnits->get($mesActual, 0),
+            ],
+            'variacion' => [
+                'actual' => $actual,
+                'anterior' => $anterior,
+                'porcentaje' => $anterior > 0 ? (($actual - $anterior) / $anterior) * 100 : ($actual > 0 ? 100 : 0),
+            ],
+            'meses' => $months,
+            'metodos' => $metodos,
+            'ranking' => $rankingProductos,
+            'stock_bajo' => $stockBajo->map(fn (Producto $producto): array => [
+                'id' => $producto->getKey(),
+                'nombre' => $producto->nombre_producto,
+                'stock' => $producto->stock_actual,
+            ]),
+            'cantidad_stock_bajo' => Producto::whereColumn('stock_actual', '<=', 'stock_minimo_alerta')->count(),
+        ]);
     }
 }
