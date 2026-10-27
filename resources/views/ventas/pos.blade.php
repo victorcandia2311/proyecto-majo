@@ -509,7 +509,7 @@
                     >
                         <span class="pos-product-media">
                             <img
-                                src="{{ $producto->imagen_path ? \Illuminate\Support\Facades\Storage::url($producto->imagen_path) : asset('images/product-placeholder.svg') }}"
+                                src="{{ $producto->imagen_path ? \Illuminate\Support\Facades\Storage::disk('public')->url($producto->imagen_path) : asset('images/product-placeholder.svg') }}"
                                 alt="Imagen de {{ $producto->nombre_producto }}"
                                 loading="lazy"
                             >
@@ -706,7 +706,7 @@
     'precio'      => (float) $producto->precio_venta,
     'stock'       => (int) $producto->stock_actual,
     'imagen'      => $producto->imagen_path
-                        ? \Illuminate\Support\Facades\Storage::url($producto->imagen_path)
+                        ? \Illuminate\Support\Facades\Storage::disk('public')->url($producto->imagen_path)
                         : asset('images/product-placeholder.svg'),
 ])->values()) !!}</script>
 @endsection

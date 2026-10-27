@@ -11,7 +11,7 @@
         <input type="file" id="imagen" name="imagen" class="form-control" accept="image/jpeg,image/png,image/webp">
         <div class="form-text">JPG, PNG o WebP. Máximo 3 MB.</div>
         @if ($producto?->imagen_path)
-            <img src="{{ Illuminate\Support\Facades\Storage::url($producto->imagen_path) }}" alt="Imagen actual de {{ $producto->nombre_producto }}" class="mt-2 rounded" style="max-width: 140px; max-height: 120px; object-fit: cover;">
+            <img src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($producto->imagen_path) }}" alt="Imagen actual de {{ $producto->nombre_producto }}" class="mt-2 rounded" style="max-width: 140px; max-height: 120px; object-fit: cover;">
         @endif
     </div>
     @if ($producto)

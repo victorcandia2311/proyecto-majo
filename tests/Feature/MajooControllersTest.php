@@ -140,6 +140,22 @@ test('employee sales screen uses the responsive visual point of sale', function 
         ->assertSee('pos-checkout-form', false);
 });
 
+test('employee point of sale renders product images from the public disk', function () {
+    config([
+        'filesystems.default' => 'local',
+        'filesystems.disks.public.url' => 'https://cdn.example.test/product-images',
+    ]);
+    Producto::factory()->create([
+        'stock_actual' => 4,
+        'imagen_path' => 'productos/mouse.png',
+    ]);
+
+    $this->actingAs(Empleado::factory()->withAccess('empleado')->make(['id_empleado' => 43]))
+        ->get(route('ventas.index'))
+        ->assertSee('src="https://cdn.example.test/product-images/productos/mouse.png"', false)
+        ->assertSee('https:\\/\\/cdn.example.test\\/product-images\\/productos\\/mouse.png', false);
+});
+
 test('employee registration and listing do not show employee type', function () {
     $this->get(route('empleados.index'))
         ->assertOk()
