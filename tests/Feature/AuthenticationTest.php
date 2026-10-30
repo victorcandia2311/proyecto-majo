@@ -98,7 +98,11 @@ beforeEach(function () {
 });
 
 test('authentication pages render with protected forms', function (string $routeName) {
-    $response = $this->get(route($routeName))->assertOk()->assertSee('MAJO')->assertDontSee('PES');
+    $response = $this->get(route($routeName))
+        ->assertOk()
+        ->assertSee('MAJO')
+        ->assertDontSee('PES')
+        ->assertDontSee('data-theme-selector', false);
     if ($routeName === 'login') {
         $response->assertSee('¿Quién inicia sesión?')->assertSee('Vendedor')->assertSee('Administrador');
     } else {

@@ -7,11 +7,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Panel') · MAJO</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}">
+    <script src="{{ asset('js/theme.js') }}?v={{ filemtime(public_path('js/theme.js')) }}"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     <link href="{{ asset('css/style.css') }}?v={{ filemtime(public_path('css/style.css')) }}" rel="stylesheet">
     <link href="{{ asset('assets/css/responsive.css') }}?v={{ filemtime(public_path('assets/css/responsive.css')) }}" rel="stylesheet">
+    <link href="{{ asset('css/theme.css') }}?v={{ filemtime(public_path('css/theme.css')) }}" rel="stylesheet">
     @stack('styles')
 </head>
 <body class="app-body" @if (request()->routeIs('productos.index', 'inventario.index', 'ventas.index', 'empleados.index', 'proveedores.index', 'asistencia.index')) data-live-lists @endif>
@@ -29,6 +31,24 @@
                 </a>
                 </div>
                 <div class="header-account d-flex align-items-center ms-auto">
+                    <div class="theme-control">
+                        <label for="theme-selector">
+                            <i class="bi bi-circle-half" aria-hidden="true"></i>
+                            <span>Tema</span>
+                        </label>
+                        <select
+                            id="theme-selector"
+                            class="theme-select"
+                            aria-label="Tema visual"
+                            data-theme-selector
+                            data-native-select
+                        >
+                            <option value="light">Claro</option>
+                            <option value="dark">Oscuro</option>
+                            <option value="auto">Automático</option>
+                        </select>
+                        <span class="visually-hidden" data-theme-status role="status" aria-live="polite"></span>
+                    </div>
                     <div class="user-capsule">
                         <span class="user-avatar" aria-hidden="true">{{ Illuminate\Support\Str::upper(Illuminate\Support\Str::substr(trim(auth()->user()->nombres), 0, 1)) }}</span>
                         <div class="user-identity">
@@ -183,7 +203,7 @@
             <div class="content-body">
                 @yield('content')
             </div>
-            <footer class="app-footer">MAJO · Sistema de inventario y ventas · Versión 1.01</footer>
+            <footer class="app-footer">MAJO · Sistema de inventario y ventas · Versión 2.01</footer>
         </main>
     </div>
     <script id="app-feedback-data" type="application/json">{!! Illuminate\Support\Js::encode([

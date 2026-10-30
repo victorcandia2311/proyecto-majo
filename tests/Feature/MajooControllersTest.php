@@ -129,6 +129,15 @@ test('module routes return their expected view data', function (string $routeNam
     ['dashboard.index', 'dashboard.index', []],
 ]);
 
+test('administrator views expose the theme selector and all available choices', function () {
+    $this->get(route('dashboard.index'))
+        ->assertOk()
+        ->assertSee('data-theme-selector', false)
+        ->assertSee('<option value="light">Claro</option>', false)
+        ->assertSee('<option value="dark">Oscuro</option>', false)
+        ->assertSee('<option value="auto">Automático</option>', false);
+});
+
 test('employee sales screen uses the responsive visual point of sale', function () {
     Producto::factory()->create(['stock_actual' => 4, 'descripcion' => 'Edición especial']);
     $this->actingAs(Empleado::factory()->withAccess('empleado')->make(['id_empleado' => 42]))
@@ -137,7 +146,9 @@ test('employee sales screen uses the responsive visual point of sale', function 
         ->assertViewIs('ventas.pos')
         ->assertSee('pos-product-grid', false)
         ->assertSee('Edición especial')
-        ->assertSee('pos-checkout-form', false);
+        ->assertSee('pos-checkout-form', false)
+        ->assertSee('data-theme-selector', false)
+        ->assertSee('<option value="auto">Automático</option>', false);
 });
 
 test('employee point of sale renders product images from the public disk', function () {

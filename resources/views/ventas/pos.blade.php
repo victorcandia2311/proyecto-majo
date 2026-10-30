@@ -593,7 +593,7 @@
                     <strong id="pos-subtotal">S/ 0.00</strong>
                 </div>
                 <div class="pos-summary-row">
-                    <span>Impuestos</span>
+                    <span>IGV</span>
                     <strong>No aplica</strong>
                 </div>
                 <div class="pos-summary-row pos-summary-total">

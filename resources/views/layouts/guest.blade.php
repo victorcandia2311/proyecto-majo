@@ -40,7 +40,7 @@
                 @endif
                 @yield('content')
             </div>
-            <footer class="auth-footer"><i class="bi bi-shield-lock" aria-hidden="true"></i> MAJO · Versión 1.01</footer>
+            <footer class="auth-footer"><i class="bi bi-shield-lock" aria-hidden="true"></i> MAJO · Versión 2.01</footer>
         </section>
     </main>
 </body>

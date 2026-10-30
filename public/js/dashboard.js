@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         timeZone: 'America/Lima', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     });
     let loading = false;
+    let latestDashboardData = null;
 
     const updateClock = () => {
         const now = new Date();
@@ -128,6 +129,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const colors = ['#4f46e5', '#059669', '#0ea5e9', '#f59e0b', '#e11d48', '#14b8a6'];
+        const chartStyles = getComputedStyle(dashboard);
+        const chartText = chartStyles.getPropertyValue('--dashboard-chart-text').trim() || '#8792a2';
+        const chartGrid = chartStyles.getPropertyValue('--dashboard-chart-grid').trim() || '#edf0f5';
+        const chartSurface = chartStyles.getPropertyValue('--dashboard-chart-surface').trim() || '#fff';
         const baseOptions = {
             responsive: true,
             maintainAspectRatio: false,
@@ -167,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         label: 'Ingresos', data: income.map((item) => Number(item.total)),
                         borderColor: '#4f46e5', backgroundColor: gradient, fill: true,
                         tension: 0.4, borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5,
-                        pointBackgroundColor: '#fff', pointBorderColor: '#4f46e5', pointBorderWidth: 2,
+                        pointBackgroundColor: chartSurface, pointBorderColor: '#4f46e5', pointBorderWidth: 2,
                     }],
                 },
                 options: {
@@ -176,9 +181,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         ...baseOptions.plugins.tooltip, callbacks: { label: (context) => currency.format(context.parsed.y) },
                     } },
                     scales: {
-                        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#8792a2', maxRotation: 0 } },
-                        y: { beginAtZero: true, border: { display: false, dash: [4, 4] }, grid: { color: '#edf0f5' }, ticks: {
-                            color: '#8792a2', callback: (value) => `S/ ${Number(value).toLocaleString('es-PE')}`,
+                        x: { grid: { display: false }, border: { display: false }, ticks: { color: chartText, maxRotation: 0 } },
+                        y: { beginAtZero: true, border: { display: false, dash: [4, 4] }, grid: { color: chartGrid }, ticks: {
+                            color: chartText, callback: (value) => `S/ ${Number(value).toLocaleString('es-PE')}`,
                         } },
                     },
                 },
@@ -193,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     labels: payments.map((item) => item.metodo_pago),
                     datasets: [{
                         data: payments.map((item) => Number(item.total)),
-                        backgroundColor: colors, borderColor: '#fff', borderWidth: 4, hoverOffset: 5,
+                        backgroundColor: colors, borderColor: chartSurface, borderWidth: 4, hoverOffset: 5,
                     }],
                 },
                 options: {
@@ -201,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     cutout: '70%',
                     plugins: {
                         ...baseOptions.plugins,
-                        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 18, color: '#536174' } },
+                        legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', padding: 18, color: chartText } },
                         tooltip: { ...baseOptions.plugins.tooltip, callbacks: { label: (context) => `${context.label}: ${currency.format(context.parsed)}` } },
                     },
                 },
@@ -224,8 +229,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     indexAxis: 'y',
                     plugins: { ...baseOptions.plugins, legend: { display: false } },
                     scales: {
-                        x: { beginAtZero: true, border: { display: false }, grid: { color: '#edf0f5' }, ticks: { precision: 0, color: '#8792a2' } },
-                        y: { border: { display: false }, grid: { display: false }, ticks: { color: '#536174', autoSkip: false } },
+                        x: { beginAtZero: true, border: { display: false }, grid: { color: chartGrid }, ticks: { precision: 0, color: chartText } },
+                        y: { border: { display: false }, grid: { display: false }, ticks: { color: chartText, autoSkip: false } },
                     },
                 },
             });
@@ -246,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`La solicitud respondió ${response.status}.`);
 
             const data = await response.json();
+            latestDashboardData = data;
             renderMetrics(data);
             renderStock(data.stock_bajo);
             renderCharts(data);
@@ -265,6 +271,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.querySelector('[data-dashboard-retry]').addEventListener('click', loadDashboard);
+    window.addEventListener('majo:theme-change', () => {
+        if (latestDashboardData) {
+            renderCharts(latestDashboardData);
+        }
+    });
     loadDashboard();
     window.setInterval(() => {
         if (!document.hidden) loadDashboard();
