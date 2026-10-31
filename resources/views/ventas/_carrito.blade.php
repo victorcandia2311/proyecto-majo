@@ -49,9 +49,6 @@
                 <tr><td colspan="5" class="text-center text-muted py-4">No hay productos agregados a la venta.</td></tr>
             @endforelse
         </tbody>
-        @if (count($carrito) > 0)
-            <tfoot><tr><th colspan="3" class="text-end">TOTAL ESTIMADO</th><td colspan="2" class="data-table-number">S/ {{ number_format($totalCarrito, 2) }}</td></tr></tfoot>
-        @endif
     </table></div>
     @if (count($carrito) > 0)
         <div class="card-body">
@@ -71,15 +68,15 @@
             <form action="{{ route('ventas.confirmar') }}" method="POST">
                 @csrf
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="cliente_nombre" class="form-label">Nombre del cliente</label>
                         <input type="text" id="cliente_nombre" name="cliente_nombre" value="{{ old('cliente_nombre') }}" maxlength="100" class="form-control" placeholder="Opcional">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="cliente_documento" class="form-label">Documento</label>
                         <input type="text" id="cliente_documento" name="cliente_documento" value="{{ old('cliente_documento') }}" inputmode="numeric" pattern="(?:[0-9]{8}|[0-9]{11})" minlength="8" maxlength="11" data-digits-only class="form-control" placeholder="DNI o RUC, solo números">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label for="metodo_pago" class="form-label">Método de pago</label>
                         <select id="metodo_pago" name="metodo_pago" class="form-select" required>
                             <option value="">Seleccionar</option>
@@ -88,9 +85,108 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="col-md-3">
+                        <label for="descuento_porcentaje" class="form-label">Descuento (%)</label>
+                        <div class="input-group">
+                            <input
+                                type="number"
+                                id="descuento_porcentaje"
+                                name="descuento_porcentaje"
+                                value="{{ old('descuento_porcentaje', '0') }}"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                inputmode="decimal"
+                                class="form-control @error('descuento_porcentaje') is-invalid @enderror"
+                                aria-describedby="descuento-ayuda"
+                                required
+                            >
+                            <span class="input-group-text">%</span>
+                            @error('descuento_porcentaje')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        <div id="descuento-ayuda" class="form-text">De 0 a 100; se aplica sobre el subtotal.</div>
+                    </div>
+                </div>
+                <div class="border-top pt-3 mb-4" data-sale-summary data-subtotal="{{ number_format($totalCarrito, 2, '.', '') }}">
+                    <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="sale-summary-subtotal">S/ {{ number_format($totalCarrito, 2) }}</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span>IGV (18 %)</span><strong id="sale-summary-igv">S/ 0.00</strong></div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Descuento (<span id="sale-summary-discount-percentage">0.00</span> %)</span>
+                        <strong id="sale-summary-discount-amount">S/ 0.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between border-top pt-2 fs-5 fw-bold"><span>Total final</span><strong id="sale-summary-total">S/ 0.00</strong></div>
                 </div>
                 <button type="submit" class="btn btn-success btn-lg">Confirmar venta</button>
             </form>
         </div>
     </div>
 @endif
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const summary = document.querySelector('[data-sale-summary]');
+    const discountInput = document.getElementById('descuento_porcentaje');
+    if (!summary || !discountInput) return;
+
+    const currency = new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' });
+    const subtotalCents = Math.round(Number(summary.dataset.subtotal) * 100);
+    const updateSummary = () => {
+        const valid =
+            discountInput.checkValidity() &&
+            discountInput.value.trim() !== '' &&
+            Number.isFinite(Number(discountInput.value));
+
+        if (!valid) {
+            document.getElementById('sale-summary-discount-percentage').textContent = '—';
+            document.getElementById('sale-summary-igv').textContent = '—';
+            document.getElementById('sale-summary-discount-amount').textContent = '—';
+            document.getElementById('sale-summary-total').textContent = '—';
+            return;
+        }
+
+        const percentageBasisPoints = Math.round(
+            Number(discountInput.value) * 100
+        );
+
+        const discountCents = Math.floor(
+            (subtotalCents * percentageBasisPoints + 5000) / 10000
+        );
+
+        // Primero se aplica el descuento al subtotal.
+        const taxableBaseCents = subtotalCents - discountCents;
+
+        // Después se calcula el IGV sobre la base descontada.
+        const igvCents = Math.floor(
+            (taxableBaseCents * 18 + 50) / 100
+        );
+
+        // El total suma la base descontada y el IGV.
+        const totalCents = taxableBaseCents + igvCents;
+
+        const formatCurrency = (cents) =>
+            currency.format(cents / 100);
+
+        document.getElementById('sale-summary-discount-percentage').textContent =
+            (percentageBasisPoints / 100).toFixed(2);
+
+        document.getElementById('sale-summary-subtotal').textContent =
+            formatCurrency(subtotalCents);
+
+        document.getElementById('sale-summary-igv').textContent =
+            formatCurrency(igvCents);
+
+        document.getElementById('sale-summary-discount-amount').textContent =
+            formatCurrency(discountCents);
+
+        document.getElementById('sale-summary-total').textContent =
+            formatCurrency(totalCents);
+    };
+
+    discountInput.addEventListener('input', updateSummary);
+    updateSummary();
+});
+</script>
+@endpush

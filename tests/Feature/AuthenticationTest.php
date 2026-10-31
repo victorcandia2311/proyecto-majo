@@ -75,6 +75,11 @@ beforeEach(function () {
         $table->string('cliente_nombre', 100)->nullable();
         $table->string('cliente_documento', 20)->nullable();
         $table->string('metodo_pago', 50);
+        $table->decimal('subtotal_venta', 10, 2)->nullable();
+        $table->decimal('igv_porcentaje', 5, 2)->nullable();
+        $table->decimal('igv_monto', 10, 2)->nullable();
+        $table->decimal('descuento_porcentaje', 5, 2)->nullable();
+        $table->decimal('descuento_monto', 10, 2)->nullable();
         $table->decimal('total_venta', 10, 2);
     });
 

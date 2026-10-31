@@ -158,7 +158,12 @@ CREATE TABLE "venta" (
 	"cliente_nombre" VARCHAR(100) NULL DEFAULT NULL::character varying,
 	"cliente_documento" VARCHAR(20) NULL DEFAULT NULL::character varying,
 	"metodo_pago" VARCHAR(50) NOT NULL,
-	"total_venta" NUMERIC(10,2) NOT NULL
+	"total_venta" NUMERIC(10,2) NOT NULL,
+	"subtotal_venta" NUMERIC(12,2) NULL DEFAULT NULL,
+	"igv_porcentaje" NUMERIC(5,2) NOT NULL DEFAULT 18.00,
+	"igv_monto" NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+	"descuento_porcentaje" NUMERIC(5,2) NOT NULL DEFAULT 0.00,
+	"descuento_monto" NUMERIC(12,2) NOT NULL DEFAULT 0.00
 )
 ;
 COMMENT ON COLUMN "venta"."id_venta" IS '';
@@ -167,3 +172,8 @@ COMMENT ON COLUMN "venta"."cliente_nombre" IS '';
 COMMENT ON COLUMN "venta"."cliente_documento" IS '';
 COMMENT ON COLUMN "venta"."metodo_pago" IS '';
 COMMENT ON COLUMN "venta"."total_venta" IS '';
+COMMENT ON COLUMN "venta"."subtotal_venta" IS '';
+COMMENT ON COLUMN "venta"."igv_porcentaje" IS '';
+COMMENT ON COLUMN "venta"."igv_monto" IS '';
+COMMENT ON COLUMN "venta"."descuento_porcentaje" IS '';
+COMMENT ON COLUMN "venta"."descuento_monto" IS '';

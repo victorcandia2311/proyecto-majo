@@ -360,19 +360,33 @@
 
     {{-- RESUMEN DE LA VENTA --}}
     <table class="resumen">
-        <tr>
-            <td>Subtotal</td>
-            <td class="importe">
-                S/ {{ number_format(
-                    (float) $venta->total_venta, 2
-                ) }}
-            </td>
-        </tr>
-
-        <tr>
-            <td>IGV</td>
-            <td class="importe">S/ 0.00</td>
-        </tr>
+        @if ($venta->subtotal_venta !== null)
+            <tr>
+                <td>Subtotal</td>
+                <td class="importe">S/ {{ number_format((float) $venta->subtotal_venta, 2) }}</td>
+            </tr>
+            <tr>
+                <td>Descuento aplicado ({{ number_format((float) $venta->descuento_porcentaje, 2) }} %)</td>
+                <td class="importe">S/ {{ number_format((float) $venta->descuento_monto, 2) }}</td>
+            </tr>
+            <tr>
+                <td>IGV ({{ number_format((float) $venta->igv_porcentaje, 2) }} %)</td>
+                <td class="importe">S/ {{ number_format((float) $venta->igv_monto, 2) }}</td>
+            </tr>
+        @else
+            <tr>
+                <td>Importe original registrado</td>
+                <td class="importe">S/ {{ number_format((float) $venta->total_venta, 2) }}</td>
+            </tr>
+            <tr>
+                <td>IGV</td>
+                <td class="importe">No registrado</td>
+            </tr>
+            <tr>
+                <td>Descuento</td>
+                <td class="importe">No registrado</td>
+            </tr>
+        @endif
 
         <tr class="total">
             <td>TOTAL</td>

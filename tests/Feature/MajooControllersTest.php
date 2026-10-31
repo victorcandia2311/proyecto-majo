@@ -91,6 +91,11 @@ beforeEach(function () {
         $table->string('cliente_nombre', 100)->nullable();
         $table->string('cliente_documento', 20)->nullable();
         $table->string('metodo_pago', 50);
+        $table->decimal('subtotal_venta', 10, 2)->nullable();
+        $table->decimal('igv_porcentaje', 5, 2)->nullable();
+        $table->decimal('igv_monto', 10, 2)->nullable();
+        $table->decimal('descuento_porcentaje', 5, 2)->nullable();
+        $table->decimal('descuento_monto', 10, 2)->nullable();
         $table->decimal('total_venta', 10, 2);
     });
 
@@ -477,7 +482,12 @@ test('checkout uses current product prices records details and stock exits then 
         ->assertRedirectToRoute('ventas.index')->assertSessionHas('carrito', []);
 
     $venta = Venta::sole();
-    expect($venta->total_venta)->toBe('0.60');
+    expect($venta->subtotal_venta)->toBe('0.60');
+    expect($venta->igv_porcentaje)->toBe('18.00');
+    expect($venta->igv_monto)->toBe('0.11');
+    expect($venta->descuento_porcentaje)->toBe('0.00');
+    expect($venta->descuento_monto)->toBe('0.00');
+    expect($venta->total_venta)->toBe('0.71');
     expect($producto->fresh()->stock_actual)->toBe(2);
     $this->assertDatabaseHas('detalle_venta', [
         'id_venta' => $venta->getKey(), 'id_producto' => $producto->getKey(), 'cantidad' => 3, 'precio_unitario' => '0.20',
@@ -499,8 +509,14 @@ test('JSON point of sale checkout uses database prices and updates inventory wit
     $response = $this->postJson(route('ventas.confirmar'), [
         'cliente_nombre' => 'Cliente POS',
         'metodo_pago' => 'Efectivo',
+        'descuento_porcentaje' => 10,
         'items' => [['id_producto' => $producto->getKey(), 'cantidad' => 2, 'precio' => 0.01]],
-    ])->assertCreated()->assertJsonPath('total_venta', '5.50');
+    ])->assertCreated()
+        ->assertJsonPath('subtotal_venta', '5.50')
+        ->assertJsonPath('igv_monto', '0.99')
+        ->assertJsonPath('descuento_porcentaje', '10.00')
+        ->assertJsonPath('descuento_monto', '0.55')
+        ->assertJsonPath('total_venta', '5.94');
 
     $venta = Venta::sole();
     expect($response->json('venta_id'))->toBe($venta->getKey());
@@ -518,6 +534,100 @@ test('JSON point of sale checkout uses database prices and updates inventory wit
         'tipo_movimiento' => 'SALIDA',
     ]);
     $response->assertSessionMissing('carrito');
+});
+
+test('checkout applies a sale-wide discount over all product lines', function (?string $discount, string $discountAmount, string $expectedTotal) {
+    $first = Producto::factory()->create(['stock_actual' => 2, 'precio_venta' => '125.00']);
+    $second = Producto::factory()->create(['stock_actual' => 2, 'precio_venta' => '75.00']);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $first->getKey(), 'cantidad' => 1]);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $second->getKey(), 'cantidad' => 1]);
+    $payload = ['metodo_pago' => 'Efectivo'];
+    if ($discount !== null) {
+        $payload['descuento_porcentaje'] = $discount;
+    }
+
+    $this->post(route('ventas.confirmar'), $payload)->assertRedirectToRoute('ventas.index');
+
+    $venta = Venta::sole();
+    expect($venta->subtotal_venta)->toBe('200.00');
+    expect($venta->igv_monto)->toBe('36.00');
+    expect($venta->descuento_monto)->toBe($discountAmount);
+    expect($venta->total_venta)->toBe($expectedTotal);
+    $this->assertDatabaseCount('detalle_venta', 2);
+})->with([
+    'no discount defaults to zero' => [null, '0.00', '236.00'],
+    'ten percent discount' => ['10', '20.00', '216.00'],
+    'decimal percentage discount' => ['12.5', '25.00', '211.00'],
+    'fifty percent discount' => ['50', '100.00', '136.00'],
+    'full discount' => ['100', '200.00', '36.00'],
+]);
+
+test('checkout rejects invalid discount percentages without changing inventory or sales', function (string $discount) {
+    $producto = Producto::factory()->create(['stock_actual' => 2]);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 1]);
+
+    $this->post(route('ventas.confirmar'), [
+        'metodo_pago' => 'Efectivo',
+        'descuento_porcentaje' => $discount,
+    ])->assertSessionHasErrors('descuento_porcentaje');
+
+    expect($producto->fresh()->stock_actual)->toBe(2);
+    $this->assertDatabaseEmpty('venta');
+    $this->assertDatabaseEmpty('detalle_venta');
+    $this->assertDatabaseEmpty('movimiento_inventario');
+})->with([
+    'negative' => '-0.01',
+    'over 100' => '100.01',
+    'non-numeric' => 'abc',
+    'too many decimals' => '1.001',
+    'empty' => '',
+]);
+
+test('legacy sale details and PDF keep the original total when fiscal data is absent', function () {
+    $venta = Venta::factory()->create(['total_venta' => '25.00']);
+    DetalleVenta::factory()->for($venta, 'venta')->create(['cantidad' => 2, 'precio_unitario' => '12.50']);
+
+    $this->get(route('ventas.show', $venta))->assertOk()
+        ->assertSee('Importe original registrado')
+        ->assertSee('No registrado')
+        ->assertSee('25.00');
+
+    $html = view('ventas.factura', ['venta' => $venta->fresh(), 'detalles' => $venta->detalles])->render();
+    expect($html)->toContain('Importe original registrado', 'No registrado', '25.00');
+});
+
+test('sale history detail and PDF display the stored fiscal amounts', function () {
+    $venta = Venta::factory()->create([
+        'subtotal_venta' => '100.00',
+        'igv_porcentaje' => '18.00',
+        'igv_monto' => '18.00',
+        'descuento_porcentaje' => '10.00',
+        'descuento_monto' => '10.00',
+        'total_venta' => '108.00',
+    ]);
+    DetalleVenta::factory()->for($venta, 'venta')->create(['cantidad' => 1, 'precio_unitario' => '100.00']);
+
+    $this->get(route('ventas.index'))->assertSee('IGV')->assertSee('S/ 10.00')->assertSee('S/ 18.00');
+    $this->get(route('ventas.show', $venta))->assertSee('IGV (18.00 %)')->assertSee('TOTAL FINAL')->assertSee('108.00');
+    $this->get(route('ventas.pdf', $venta))->assertOk()->assertHeader('Content-Type', 'application/pdf')
+        ->assertDownload('Recibo_Venta_'.$venta->getKey().'.pdf');
+
+    $html = view('ventas.factura', ['venta' => $venta->fresh(), 'detalles' => $venta->detalles])->render();
+    expect($html)->toContain('Subtotal', 'IGV (18.00 %)', 'Descuento aplicado (10.00 %)', '108.00');
+    expect(substr_count($html, 'S/ 18.00'))->toBe(1);
+});
+
+test('checkout rolls back when the tax makes the total exceed the stored monetary range', function () {
+    $producto = Producto::factory()->create(['stock_actual' => 2, 'precio_venta' => '90000000.00']);
+    $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 1]);
+
+    $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Efectivo'])
+        ->assertSessionHasErrors(['carrito' => 'El importe de la venta excede el límite permitido.']);
+
+    expect($producto->fresh()->stock_actual)->toBe(2);
+    $this->assertDatabaseEmpty('venta');
+    $this->assertDatabaseEmpty('detalle_venta');
+    $this->assertDatabaseEmpty('movimiento_inventario');
 });
 
 test('JSON point of sale checkout rejects insufficient stock without saving a sale', function () {

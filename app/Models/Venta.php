@@ -25,6 +25,11 @@ class Venta extends Model
         'cliente_nombre',
         'cliente_documento',
         'metodo_pago',
+        'subtotal_venta',
+        'igv_porcentaje',
+        'igv_monto',
+        'descuento_porcentaje',
+        'descuento_monto',
         'total_venta',
     ];
 
@@ -33,6 +38,11 @@ class Venta extends Model
     {
         return [
             'fecha_hora' => 'datetime',
+            'subtotal_venta' => 'decimal:2',
+            'igv_porcentaje' => 'decimal:2',
+            'igv_monto' => 'decimal:2',
+            'descuento_porcentaje' => 'decimal:2',
+            'descuento_monto' => 'decimal:2',
             'total_venta' => 'decimal:2',
         ];
     }

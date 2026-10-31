@@ -33,7 +33,17 @@
                 <tr><td colspan="4" class="text-center text-muted py-4">Esta venta no tiene detalles registrados.</td></tr>
             @endforelse
         </tbody>
-        <tfoot><tr><th colspan="3" class="text-end">TOTAL</th><th class="data-table-number">S/ {{ number_format((float) $venta->total_venta, 2) }}</th></tr></tfoot>
+        <tfoot>
+            @if ($venta->subtotal_venta !== null)
+                <tr><th colspan="3" class="text-end">SUBTOTAL</th><th class="data-table-number">S/ {{ number_format((float) $venta->subtotal_venta, 2) }}</th></tr>
+                <tr><th colspan="3" class="text-end">Descuento ({{ number_format((float) $venta->descuento_porcentaje, 2) }} %)</th><th class="data-table-number">S/ {{ number_format((float) $venta->descuento_monto, 2) }}</th></tr>
+                <tr><th colspan="3" class="text-end">IGV ({{ number_format((float) $venta->igv_porcentaje, 2) }} %)</th><th class="data-table-number">S/ {{ number_format((float) $venta->igv_monto, 2) }}</th></tr>
+            @else
+                <tr><th colspan="3" class="text-end">Importe original registrado</th><th class="data-table-number">S/ {{ number_format((float) $venta->total_venta, 2) }}</th></tr>
+                <tr><th colspan="3" class="text-end">IGV / descuento</th><th class="data-table-number">No registrado</th></tr>
+            @endif
+            <tr><th colspan="3" class="text-end">TOTAL FINAL</th><th class="data-table-number">S/ {{ number_format((float) $venta->total_venta, 2) }}</th></tr>
+        </tfoot>
     </table></div>
 </div>
 @endsection

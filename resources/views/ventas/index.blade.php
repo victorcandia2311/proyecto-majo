@@ -33,25 +33,28 @@
         </div>
     @endif
     <div class="table-responsive"><table class="table table-hover data-table align-middle">
-        <thead class="data-table-head"><tr><th>N.º</th><th>Fecha</th><th>Cliente</th><th>Método de pago</th><th>Total</th><th class="text-end">Acción</th></tr></thead>
+        <thead class="data-table-head"><tr><th>N.º</th><th>Fecha</th><th>Cliente</th><th>Método de pago</th><th>Descuento (%)</th><th>Descuento</th><th>IGV</th><th>Total</th><th class="text-end">Acción</th></tr></thead>
         <tbody>
             @forelse ($ventas as $venta)
-                <tr data-search-row data-search-date="{{ $venta->fecha_hora->format('Y-m-d') }}" data-search-value="{{ $venta->id_venta }} {{ $venta->fecha_hora->format('d/m/Y H:i') }} {{ $venta->cliente_nombre ?? 'cliente general' }} {{ $venta->cliente_documento }} {{ $venta->metodo_pago }} {{ $venta->total_venta }}" data-suggestion-label="#{{ $venta->id_venta }} · {{ $venta->cliente_nombre ?? 'Cliente general' }} · {{ $venta->metodo_pago }}">
+                <tr data-search-row data-search-date="{{ $venta->fecha_hora->format('Y-m-d') }}" data-search-value="{{ $venta->id_venta }} {{ $venta->fecha_hora->format('d/m/Y H:i') }} {{ $venta->cliente_nombre ?? 'cliente general' }} {{ $venta->cliente_documento }} {{ $venta->metodo_pago }} {{ $venta->igv_monto }} {{ $venta->descuento_porcentaje }} {{ $venta->descuento_monto }} {{ $venta->total_venta }}" data-suggestion-label="#{{ $venta->id_venta }} · {{ $venta->cliente_nombre ?? 'Cliente general' }} · {{ $venta->metodo_pago }}">
                     <td class="data-table-secondary">#{{ $venta->id_venta }}</td><td class="text-nowrap data-table-secondary">{{ $venta->fecha_hora->format('d/m/Y H:i') }}</td>
                     <td class="data-table-primary">{{ $venta->cliente_nombre ?? 'Cliente general' }}</td>
                     <td><span class="data-badge data-badge-neutral">{{ $venta->metodo_pago }}</span></td>
+                    <td class="data-table-number">{{ $venta->descuento_porcentaje !== null ? number_format((float) $venta->descuento_porcentaje, 2).' %' : 'No registrado' }}</td>
+                    <td class="data-table-number">{{ $venta->descuento_monto !== null ? 'S/ '.number_format((float) $venta->descuento_monto, 2) : 'No registrado' }}</td>
+                    <td class="data-table-number">{{ $venta->igv_monto !== null ? 'S/ '.number_format((float) $venta->igv_monto, 2) : 'No registrado' }}</td>
                     <td class="data-table-number">S/ {{ number_format((float) $venta->total_venta, 2) }}</td>
                     <td><div class="action-buttons"><a href="{{ route('ventas.show', $venta) }}" class="btn-icon btn-icon-primary" aria-label="Ver detalle de venta {{ $venta->id_venta }}" title="Ver detalle"><i class="bi bi-eye" aria-hidden="true"></i></a></div></td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="table-empty-cell">@include('components.empty-state', [
+                <tr><td colspan="9" class="table-empty-cell">@include('components.empty-state', [
                     'title' => 'Todavía no hay ventas',
                     'description' => 'Inicia una venta para que aparezca en este historial.',
                     'actionUrl' => route('ventas.nueva'),
                     'actionLabel' => 'Registrar una venta',
                 ])</td></tr>
             @endforelse
-            <tr data-search-empty hidden><td colspan="6" class="text-center text-muted py-4">No encontramos ventas que coincidan.</td></tr>
+            <tr data-search-empty hidden><td colspan="9" class="text-center text-muted py-4">No encontramos ventas que coincidan.</td></tr>
         </tbody>
     </table></div>
     @if ($ventas->hasPages())

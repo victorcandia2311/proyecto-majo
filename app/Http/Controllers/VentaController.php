@@ -17,6 +17,10 @@ use Illuminate\View\View;
 
 class VentaController extends Controller
 {
+    private const MAX_AMOUNT_CENTS = 9_999_999_999;
+
+    private const IGV_PERCENTAGE = 18;
+
     public function index(Request $request): View
     {
         $productos = Producto::where('stock_actual', '>', 0)->orderBy('nombre_producto')->get();
@@ -38,7 +42,7 @@ class VentaController extends Controller
         $totalVentasFiltradas = $filtrandoPorFecha ? (clone $ventasQuery)->sum('total_venta') : null;
         $ventas = $ventasQuery->orderByDesc('fecha_hora')->paginate(15)->withQueryString();
         $carrito = $request->session()->get('carrito', []);
-        $totalCarrito = collect($carrito)->sum(fn (array $item): float => $item['cantidad'] * (float) $item['precio_unitario']);
+        $totalCarrito = $this->formatDecimal($this->cartSubtotalInCents($carrito));
 
         return view('ventas.index', compact(
             'productos',
@@ -61,7 +65,7 @@ class VentaController extends Controller
         }
 
         $carrito = $request->session()->get('carrito', []);
-        $totalCarrito = collect($carrito)->sum(fn (array $item): float => $item['cantidad'] * (float) $item['precio_unitario']);
+        $totalCarrito = $this->formatDecimal($this->cartSubtotalInCents($carrito));
 
         return view('ventas.nueva', compact('productos', 'carrito', 'totalCarrito'));
     }
@@ -111,7 +115,14 @@ class VentaController extends Controller
             'cliente_nombre' => ['nullable', 'string', 'max:100'],
             'cliente_documento' => ['nullable', 'regex:/^(?:[0-9]{8}|[0-9]{11})$/'],
             'metodo_pago' => ['required', Rule::in(['Efectivo', 'Yape', 'Plin', 'Tarjeta'])],
+            'descuento_porcentaje' => ['sometimes', 'numeric', 'min:0', 'max:100', 'decimal:0,2'],
+        ], [
+            'descuento_porcentaje.numeric' => 'El descuento debe ser un porcentaje numérico.',
+            'descuento_porcentaje.min' => 'El descuento no puede ser menor que 0 %.',
+            'descuento_porcentaje.max' => 'El descuento no puede superar el 100 %.',
+            'descuento_porcentaje.decimal' => 'El descuento puede tener hasta dos decimales.',
         ]);
+        $descuentoPorcentaje = $data['descuento_porcentaje'] ?? '0';
         $checkoutJson = $request->expectsJson();
         $carrito = $checkoutJson
             ? $request->validate([
@@ -133,15 +144,17 @@ class VentaController extends Controller
             ])->validate();
         }
 
-        $venta = DB::transaction(function () use ($data, $carrito): Venta {
+        $venta = DB::transaction(function () use ($data, $carrito, $descuentoPorcentaje): Venta {
             $productos = Producto::whereIn('id_producto', array_column($carrito, 'id_producto'))
                 ->orderBy('id_producto')->lockForUpdate()->get()->keyBy('id_producto');
             $venta = Venta::create([
-                ...$data,
+                'cliente_nombre' => $data['cliente_nombre'] ?? null,
+                'cliente_documento' => $data['cliente_documento'] ?? null,
+                'metodo_pago' => $data['metodo_pago'],
                 'fecha_hora' => now(),
                 'total_venta' => '0.00',
             ]);
-            $totalCentimos = 0;
+            $subtotalCentimos = 0;
 
             foreach ($carrito as $item) {
                 $producto = $productos->get($item['id_producto']);
@@ -153,12 +166,13 @@ class VentaController extends Controller
 
                 [$entero, $decimal] = explode('.', $producto->precio_venta);
                 $precioCentimos = (int) $entero * 100 + (int) $decimal;
+                $importeLineaCentimos = $precioCentimos * $cantidad;
 
-                if (str_starts_with($producto->precio_venta, '-') || ($precioCentimos > 0 && $cantidad > intdiv(9999999999 - $totalCentimos, $precioCentimos))) {
+                if (str_starts_with($producto->precio_venta, '-') || $importeLineaCentimos > self::MAX_AMOUNT_CENTS - $subtotalCentimos) {
                     throw ValidationException::withMessages(['carrito' => 'El importe de la venta excede el límite permitido o contiene un precio inválido.']);
                 }
 
-                $totalCentimos += $precioCentimos * $cantidad;
+                $subtotalCentimos += $importeLineaCentimos;
                 $venta->detalles()->create([
                     'id_producto' => $producto->getKey(),
                     'cantidad' => $cantidad,
@@ -173,7 +187,36 @@ class VentaController extends Controller
                 ]);
             }
 
-            $venta->update(['total_venta' => sprintf('%d.%02d', intdiv($totalCentimos, 100), $totalCentimos % 100)]);
+            // Convertir el porcentaje de descuento a puntos básicos.
+            $descuentoPuntosBase = $this->percentageToBasisPoints((string) $descuentoPorcentaje);
+
+            // Calcular el descuento sobre el subtotal original.
+            $descuentoCentimos = intdiv($subtotalCentimos * $descuentoPuntosBase + 5000, 10000);
+
+            // Calcular la base imponible después de aplicar el descuento.
+            $baseImponibleCentimos = $subtotalCentimos - $descuentoCentimos;
+
+            // Calcular el IGV del 18 % sobre la base imponible.
+            $igvCentimos = intdiv($baseImponibleCentimos * self::IGV_PERCENTAGE + 50, 100);
+
+            // Calcular el total final de la venta.
+            $totalCentimos = $baseImponibleCentimos + $igvCentimos;
+
+            // Verificar el límite máximo permitido.
+            if ($totalCentimos > self::MAX_AMOUNT_CENTS) {
+                throw ValidationException::withMessages([
+                    'carrito' => 'El importe de la venta excede el límite permitido.'
+                ]);
+            }
+
+            $venta->update([
+                'subtotal_venta' => $this->formatDecimal($subtotalCentimos),
+                'igv_porcentaje' => sprintf('%d.00', self::IGV_PERCENTAGE),
+                'igv_monto' => $this->formatDecimal($igvCentimos),
+                'descuento_porcentaje' => $this->formatDecimal($descuentoPuntosBase),
+                'descuento_monto' => $this->formatDecimal($descuentoCentimos),
+                'total_venta' => $this->formatDecimal($totalCentimos),
+            ]);
 
             return $venta;
         });
@@ -182,6 +225,11 @@ class VentaController extends Controller
             return response()->json([
                 'message' => 'Venta registrada correctamente.',
                 'venta_id' => $venta->getKey(),
+                'subtotal_venta' => $venta->subtotal_venta,
+                'igv_porcentaje' => $venta->igv_porcentaje,
+                'igv_monto' => $venta->igv_monto,
+                'descuento_porcentaje' => $venta->descuento_porcentaje,
+                'descuento_monto' => $venta->descuento_monto,
                 'total_venta' => $venta->total_venta,
                 'detalle_url' => route('ventas.show', $venta),
                 'recibo_url' => route('ventas.pdf', $venta),
@@ -209,5 +257,26 @@ class VentaController extends Controller
         return Pdf::loadView('ventas.factura', compact('venta', 'detalles'))
             ->setPaper('a4')
             ->download('Recibo_Venta_'.$venta->getKey().'.pdf');
+    }
+
+    private function percentageToBasisPoints(string $percentage): int
+    {
+        [$whole, $fraction] = array_pad(explode('.', $percentage, 2), 2, '');
+
+        return (int) $whole * 100 + (int) str_pad($fraction, 2, '0');
+    }
+
+    private function cartSubtotalInCents(array $carrito): int
+    {
+        return array_reduce($carrito, function (int $subtotalCentimos, array $item): int {
+            [$entero, $decimal] = explode('.', (string) $item['precio_unitario']);
+
+            return $subtotalCentimos + (((int) $entero * 100) + (int) $decimal) * (int) $item['cantidad'];
+        }, 0);
+    }
+
+    private function formatDecimal(int $valueInHundredths): string
+    {
+        return sprintf('%d.%02d', intdiv($valueInHundredths, 100), $valueInHundredths % 100);
     }
 }

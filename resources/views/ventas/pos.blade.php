@@ -593,11 +593,15 @@
                     <strong id="pos-subtotal">S/ 0.00</strong>
                 </div>
                 <div class="pos-summary-row">
-                    <span>IGV</span>
-                    <strong>No aplica</strong>
+                    <span>IGV (18 %)</span>
+                    <strong id="pos-igv">S/ 0.00</strong>
+                </div>
+                <div class="pos-summary-row">
+                    <span>Descuento (<span id="pos-discount-percentage-value">0.00</span> %)</span>
+                    <strong id="pos-discount-amount">S/ 0.00</strong>
                 </div>
                 <div class="pos-summary-row pos-summary-total">
-                    <span>Total</span>
+                    <span>Total final</span>
                     <strong id="pos-total">S/ 0.00</strong>
                 </div>
             </div>
@@ -641,6 +645,25 @@
                             <option>Plin</option>
                             <option>Tarjeta</option>
                         </select>
+                    </div>
+                    <div>
+                        <label for="pos-discount-percentage">Descuento (%)</label>
+                        <div class="input-group">
+                            <input
+                                id="pos-discount-percentage"
+                                class="form-control"
+                                name="descuento_porcentaje"
+                                type="number"
+                                min="0"
+                                max="100"
+                                step="0.01"
+                                inputmode="decimal"
+                                value="0"
+                                required
+                            >
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div class="form-text">De 0 a 100; se aplica sobre el subtotal.</div>
                     </div>
                 </div>
 
