@@ -23,12 +23,6 @@ class VentaController extends Controller
 
     public function index(Request $request): View
     {
-        $productos = Producto::where('stock_actual', '>', 0)->orderBy('nombre_producto')->get();
-
-        if (! auth()->user()->isAdmin()) {
-            return view('ventas.pos', compact('productos'));
-        }
-
         $filtros = $request->validate([
             'fecha_desde' => ['nullable', 'date_format:Y-m-d'],
             'fecha_hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:fecha_desde'],
@@ -45,7 +39,6 @@ class VentaController extends Controller
         $totalCarrito = $this->formatDecimal($this->cartSubtotalInCents($carrito));
 
         return view('ventas.index', compact(
-            'productos',
             'ventas',
             'carrito',
             'totalCarrito',
@@ -56,18 +49,11 @@ class VentaController extends Controller
         ));
     }
 
-    public function create(Request $request): View
+    public function create(): View
     {
         $productos = Producto::where('stock_actual', '>', 0)->orderBy('nombre_producto')->get();
 
-        if (! auth()->user()->isAdmin()) {
-            return view('ventas.pos', compact('productos'));
-        }
-
-        $carrito = $request->session()->get('carrito', []);
-        $totalCarrito = $this->formatDecimal($this->cartSubtotalInCents($carrito));
-
-        return view('ventas.nueva', compact('productos', 'carrito', 'totalCarrito'));
+        return view('ventas.pos', compact('productos'));
     }
 
     public function agregar(Request $request): RedirectResponse
@@ -205,7 +191,7 @@ class VentaController extends Controller
             // Verificar el límite máximo permitido.
             if ($totalCentimos > self::MAX_AMOUNT_CENTS) {
                 throw ValidationException::withMessages([
-                    'carrito' => 'El importe de la venta excede el límite permitido.'
+                    'carrito' => 'El importe de la venta excede el límite permitido.',
                 ]);
             }
 
@@ -249,14 +235,18 @@ class VentaController extends Controller
         return view('ventas.detalle', compact('venta', 'detalles'));
     }
 
-    public function pdf(Venta $venta): Response
+    public function pdf(Request $request, Venta $venta): Response
     {
         $venta->load('detalles.producto');
         $detalles = $venta->detalles;
+        $pdf = Pdf::loadView('ventas.factura', compact('venta', 'detalles'))
+            ->setPaper('a4');
 
-        return Pdf::loadView('ventas.factura', compact('venta', 'detalles'))
-            ->setPaper('a4')
-            ->download('Recibo_Venta_'.$venta->getKey().'.pdf');
+        if ($request->boolean('inline')) {
+            return $pdf->stream('Recibo_Venta_'.$venta->getKey().'.pdf');
+        }
+
+        return $pdf->download('Recibo_Venta_'.$venta->getKey().'.pdf');
     }
 
     private function percentageToBasisPoints(string $percentage): int

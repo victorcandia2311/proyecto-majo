@@ -19,8 +19,10 @@ class AsistenciaController extends Controller
     public function index(): View
     {
         $empleados = Empleado::orderBy('nombres')->get();
-        $asistencias = Asistencia::with('empleado')->orderByDesc('fecha')
-            ->orderByRaw('hora_ingreso DESC NULLS LAST')->get();
+        $asistencias = Asistencia::with('empleado')
+            ->whereDate('fecha', now()->toDateString())
+            ->orderByDesc('hora_ingreso')
+            ->get();
         $empleadosTemporales = EmpleadoTemporal::with('empleado')->orderByDesc('id_temporal')->get();
 
         return view('asistencia.index', compact('empleados', 'asistencias', 'empleadosTemporales'));

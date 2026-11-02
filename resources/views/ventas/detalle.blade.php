@@ -6,7 +6,14 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
     <h1 class="h3 mb-0">Venta #{{ $venta->id_venta }}</h1>
     <div class="d-flex flex-wrap gap-2">
-        <a href="{{ route('ventas.pdf', $venta) }}" class="btn btn-danger">Descargar PDF</a>
+        <button
+            type="button"
+            class="btn btn-danger"
+            id="print-ticket-button"
+            data-print-url="{{ route('ventas.pdf', ['venta' => $venta, 'inline' => true]) }}"
+        >
+            <i class="bi bi-printer me-1" aria-hidden="true"></i>Imprimir Ticket
+        </button>
         <a href="{{ route('ventas.index') }}" class="btn btn-secondary">Volver a ventas</a>
     </div>
 </div>
@@ -47,3 +54,64 @@
     </table></div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const printButton = document.getElementById('print-ticket-button');
+
+    if (!printButton) {
+        return;
+    }
+
+    printButton.addEventListener('click', function () {
+        const printFrame = document.createElement('iframe');
+        printFrame.title = 'Comprobante de venta para imprimir';
+        printFrame.tabIndex = -1;
+        printFrame.setAttribute('aria-hidden', 'true');
+        printFrame.style.cssText = 'position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;';
+
+        const cleanupTimer = window.setTimeout(function () {
+            printFrame.remove();
+        }, 60000);
+
+        printFrame.addEventListener('load', function onPrintDocumentLoad() {
+            printFrame.removeEventListener('load', onPrintDocumentLoad);
+
+            try {
+                const printWindow = printFrame.contentWindow;
+
+                if (!printWindow) {
+                    throw new Error('No se pudo acceder al documento del comprobante.');
+                }
+
+                printWindow.addEventListener('afterprint', function () {
+                    window.clearTimeout(cleanupTimer);
+                    printFrame.remove();
+                }, { once: true });
+
+                printWindow.focus();
+                window.setTimeout(function () {
+                    try {
+                        printWindow.print();
+                    } catch (error) {
+                        window.clearTimeout(cleanupTimer);
+                        printFrame.remove();
+                        console.error('No se pudo abrir el diálogo de impresión.', error);
+                        window.alert('No se pudo abrir el diálogo de impresión. Inténtalo nuevamente.');
+                    }
+                }, 300);
+            } catch (error) {
+                window.clearTimeout(cleanupTimer);
+                printFrame.remove();
+                console.error('No se pudo abrir el diálogo de impresión.', error);
+                window.alert('No se pudo abrir el diálogo de impresión. Inténtalo nuevamente.');
+            }
+        }, { once: true });
+
+        printFrame.src = printButton.dataset.printUrl;
+        document.body.appendChild(printFrame);
+    });
+});
+</script>
+@endpush

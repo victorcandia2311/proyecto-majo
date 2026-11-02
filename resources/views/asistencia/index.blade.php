@@ -4,15 +4,7 @@
 
 @push('styles')
 <style>
-    /* ── Action bar ───────────────────────────────────────────────── */
-    .asistencia-action-bar {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: .6rem;
-    }
-
-    /* ── Modal form fields ────────────────────────────────────────── */
+    /* ═══ Modal form fields ═══════════════════════════════════════════════ */
     .asistencia-modal .modal-content {
         border: 0;
         border-radius: 1rem;
@@ -62,7 +54,7 @@
 
 @section('content')
 
-{{-- ── Page header ────────────────────────────────────────────────── --}}
+{{-- ═══ Page header ══════════════════════════════════════════════════════════ --}}
 <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-4">
     <div>
         <h1 class="h3 mb-1">Control de asistencia</h1>
@@ -73,214 +65,251 @@
     </a>
 </div>
 
-{{-- ── Action bar ──────────────────────────────────────────────────── --}}
-<div class="asistencia-action-bar mb-4">
-    <button
-        type="button"
-        class="btn btn-primary"
-        data-bs-toggle="modal"
-        data-bs-target="#modal-staff"
-        @disabled($empleados->isEmpty())
-    >
-        <i class="bi bi-person-check me-2" aria-hidden="true"></i>Marcar Asistencia <span class="d-none d-sm-inline">(Staff)</span>
-    </button>
+{{-- ═══════════════════════════════════════════════════════════════════════════
+     PANTALLA 1: MENÚ CENTRAL (visible por defecto)
+     ═══════════════════════════════════════════════════════════════════════════ --}}
+<div id="menu-hub">
 
-    <button
-        type="button"
-        class="btn btn-outline-success"
-        data-bs-toggle="modal"
-        data-bs-target="#modal-temporal-marcacion"
-        @disabled($empleadosTemporales->isEmpty())
-    >
-        <i class="bi bi-person-clock me-2" aria-hidden="true"></i>Marcar Asistencia <span class="d-none d-sm-inline">(Temporal)</span>
-    </button>
+    <div class="row row-cols-1 row-cols-md-3 g-4 mb-2">
 
-    <button
-        type="button"
-        class="btn btn-outline-secondary"
-        data-bs-toggle="modal"
-        data-bs-target="#modal-nuevo-temporal"
-    >
-        <i class="bi bi-person-plus me-2" aria-hidden="true"></i>Nuevo Emp. Temporal
-    </button>
+        {{-- Botón 1: Ver asistencias de hoy --}}
+        <div class="col">
+            <button type="button" class="hub-card h-100 w-100" data-show-view="tabla-staff">
+                <span class="hub-card-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                </span>
+                <span class="hub-card-text">
+                    <strong>Asistencias de Hoy</strong>
+                    <span>Registros del día actual</span>
+                </span>
+                <i class="bi bi-arrow-right ms-auto text-secondary" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        {{-- Botón 2: Marcar ingreso/salida personal fijo --}}
+        <div class="col">
+            <button type="button" class="hub-card h-100 w-100"
+                    data-bs-toggle="modal" data-bs-target="#modal-staff"
+                    @class(['opacity-50' => $empleados->isEmpty()])>
+                <span class="hub-card-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-person-check" aria-hidden="true"></i>
+                </span>
+                <span class="hub-card-text">
+                    <strong>Marcar Ingreso / Salida</strong>
+                    <span>Personal Fijo</span>
+                </span>
+                <i class="bi bi-arrow-right ms-auto text-secondary" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        {{-- Botón 3: Gestión de temporales (marcar + registrar) --}}
+        <div class="col">
+            <button type="button" class="hub-card h-100 w-100" data-show-view="tabla-temporales">
+                <span class="hub-card-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-people" aria-hidden="true"></i>
+                </span>
+                <span class="hub-card-text">
+                    <strong>Gestión de Temporales</strong>
+                    <span>Registrar y marcar personal temporal</span>
+                </span>
+                <i class="bi bi-arrow-right ms-auto text-secondary" aria-hidden="true"></i>
+            </button>
+        </div>
+
+    </div>
 
     @if ($empleados->isEmpty())
-        <span class="text-muted small ms-1">
-            @if(auth()->user()->isAdmin())
-                <a href="{{ route('empleados.index') }}" class="text-decoration-none">
-                    <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Registra un empleado primero
-                </a>
-            @else
-                <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Solicita al admin que registre un empleado.
-            @endif
-        </span>
+        <div class="alert alert-warning d-flex align-items-center gap-2 rounded-3 mb-0" role="alert">
+            <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
+            <span>
+                No hay empleados de personal fijo registrados.
+                @if(auth()->user()->isAdmin())
+                    <a href="{{ route('empleados.index') }}" class="alert-link">Registra un empleado</a>
+                @else
+                    Solicita al administrador que registre un empleado.
+                @endif
+            </span>
+        </div>
     @endif
-</div>
 
-{{-- ── Table: Asistencias registradas ────────────────────────────── --}}
-<div class="card data-table-card mb-4" data-live-region="attendance">
-    <div class="card-header list-card-header">
-        <h2 class="h6 mb-0">Asistencias registradas hoy</h2>
-        <div class="list-search-wrap" data-list-search>
-            <label class="visually-hidden" for="filter-attendance">Buscar asistencias</label>
-            <div class="list-search-field">
-                <i class="bi bi-search" aria-hidden="true"></i>
-                <input
-                    id="filter-attendance"
-                    type="search"
-                    placeholder="Buscar por empleado o fecha..."
-                    autocomplete="off"
-                    role="combobox"
-                    aria-autocomplete="list"
-                    aria-expanded="false"
-                    aria-controls="suggestions-attendance"
-                    data-list-search-input
-                >
+</div>{{-- /menu-hub --}}
+
+{{-- ═══════════════════════════════════════════════════════════════════════════
+     PANTALLA 2: TABLA — Asistencias de Staff (oculta por defecto)
+     ═══════════════════════════════════════════════════════════════════════════ --}}
+<div id="tabla-staff" class="d-none">
+
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <button type="button" class="view-back-btn" data-show-view="menu-hub">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
+        </button>
+        <h2 class="h5 mb-0 me-auto">Asistencias registradas hoy</h2>
+        <button
+            type="button"
+            class="btn btn-primary btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#modal-staff"
+            @disabled($empleados->isEmpty())
+        >
+            <i class="bi bi-person-check me-1" aria-hidden="true"></i>Marcar Asistencia
+        </button>
+    </div>
+
+    <div class="card data-table-card mb-4" data-live-region="attendance">
+        <div class="card-header list-card-header">
+            <h2 class="h6 mb-0">Asistencias registradas hoy</h2>
+            <div class="list-search-wrap" data-list-search>
+                <label class="visually-hidden" for="filter-attendance">Buscar asistencias</label>
+                <div class="list-search-field">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input id="filter-attendance" type="search" placeholder="Buscar por empleado o fecha..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-attendance" data-list-search-input>
+                </div>
+                <ul class="list-search-suggestions" id="suggestions-attendance" role="listbox" hidden></ul>
+                <span class="list-search-count" data-search-count></span>
             </div>
-            <ul class="list-search-suggestions" id="suggestions-attendance" role="listbox" hidden></ul>
-            <span class="list-search-count" data-search-count></span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover data-table align-middle">
+                <thead class="data-table-head">
+                    <tr>
+                        <th>ID</th>
+                        <th>Empleado</th>
+                        <th>Documento</th>
+                        <th>Fecha</th>
+                        <th>Ingreso</th>
+                        <th>Salida</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($asistencias as $asistencia)
+                        <tr
+                            data-search-row
+                            data-search-value="{{ $asistencia->id_asistencia }} {{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }} {{ $asistencia->empleado?->documento_identidad }} {{ $asistencia->fecha->format('d/m/Y') }} {{ $asistencia->hora_ingreso }} {{ $asistencia->hora_salida }}"
+                            data-suggestion-label="{{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }} — {{ $asistencia->fecha->format('d/m/Y') }}"
+                        >
+                            <td class="data-table-secondary">#{{ $asistencia->id_asistencia }}</td>
+                            <td class="data-table-primary">{{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }}</td>
+                            <td class="data-table-secondary">{{ $asistencia->empleado?->documento_identidad ?? '—' }}</td>
+                            <td class="text-nowrap data-table-secondary">{{ $asistencia->fecha->format('d/m/Y') }}</td>
+                            <td class="data-table-number">{{ $asistencia->hora_ingreso ?? '—' }}</td>
+                            <td class="data-table-number">{{ $asistencia->hora_salida ?? '—' }}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <form action="{{ route('asistencia.destroy', $asistencia) }}" method="POST" data-confirm="¿Eliminar esta asistencia?">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn-icon btn-icon-danger" aria-label="Eliminar asistencia de {{ $asistencia->empleado?->nombres ?? 'empleado' }}" title="Eliminar"><i class="bi bi-trash3" aria-hidden="true"></i></button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="table-empty-cell">
+                                @include('components.empty-state', [
+                                    'title'            => 'No hay registros de asistencia hoy',
+                                    'description'      => 'Usa el botón de arriba para marcar el ingreso o la salida de un empleado.',
+                                    'actionLabel'      => 'Marcar Asistencia (Staff)',
+                                    'actionUrl'        => '#',
+                                    'actionTarget'     => 'modal-staff',
+                                    'actionTargetType' => 'modal',
+                                ])
+                            </td>
+                        </tr>
+                    @endforelse
+                    <tr data-search-empty hidden>
+                        <td colspan="7" class="text-center text-muted py-4">No encontramos asistencias que coincidan.</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover data-table align-middle">
-            <thead class="data-table-head">
-                <tr>
-                    <th>ID</th>
-                    <th>Empleado</th>
-                    <th>Documento</th>
-                    <th>Fecha</th>
-                    <th>Ingreso</th>
-                    <th>Salida</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($asistencias as $asistencia)
-                    <tr
-                        data-search-row
-                        data-search-value="{{ $asistencia->id_asistencia }} {{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }} {{ $asistencia->empleado?->documento_identidad }} {{ $asistencia->fecha->format('d/m/Y') }} {{ $asistencia->hora_ingreso }} {{ $asistencia->hora_salida }}"
-                        data-suggestion-label="{{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }} · {{ $asistencia->fecha->format('d/m/Y') }}"
-                    >
-                        <td class="data-table-secondary">#{{ $asistencia->id_asistencia }}</td>
-                        <td class="data-table-primary">{{ $asistencia->empleado?->nombres ?? 'Empleado eliminado' }}</td>
-                        <td class="data-table-secondary">{{ $asistencia->empleado?->documento_identidad ?? '—' }}</td>
-                        <td class="text-nowrap data-table-secondary">{{ $asistencia->fecha->format('d/m/Y') }}</td>
-                        <td class="data-table-number">{{ $asistencia->hora_ingreso ?? '—' }}</td>
-                        <td class="data-table-number">{{ $asistencia->hora_salida ?? '—' }}</td>
-                        <td>
-                            <div class="action-buttons">
-                                <a
-                                    href="{{ route('asistencia.edit', $asistencia) }}"
-                                    class="btn-icon btn-icon-primary"
-                                    aria-label="Editar asistencia de {{ $asistencia->empleado?->nombres ?? 'empleado' }}"
-                                    title="Editar"
-                                ><i class="bi bi-pencil" aria-hidden="true"></i></a>
-                                <form action="{{ route('asistencia.destroy', $asistencia) }}" method="POST" data-confirm="¿Eliminar esta asistencia?">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button
-                                        type="submit"
-                                        class="btn-icon btn-icon-danger"
-                                        aria-label="Eliminar asistencia de {{ $asistencia->empleado?->nombres ?? 'empleado' }}"
-                                        title="Eliminar"
-                                    ><i class="bi bi-trash3" aria-hidden="true"></i></button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="7" class="table-empty-cell">
-                            @include('components.empty-state', [
-                                'title'       => 'No hay registros de asistencia hoy',
-                                'description' => 'Usa los botones de la parte superior para marcar el ingreso o la salida de un empleado.',
-                                'actionLabel' => 'Marcar Asistencia (Staff)',
-                                'actionUrl'   => '#',
-                                'actionTarget'     => 'modal-staff',
-                                'actionTargetType' => 'modal',
-                            ])
-                        </td>
-                    </tr>
-                @endforelse
-                <tr data-search-empty hidden>
-                    <td colspan="7" class="text-center text-muted py-4">No encontramos asistencias que coincidan.</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
 
-{{-- ── Table: Empleados temporales del día ────────────────────────── --}}
-<div class="card data-table-card" data-live-region="temporary-employees">
-    <div class="card-header list-card-header">
-        <h2 class="h6 mb-0">Historial de empleados temporales</h2>
-        <div class="list-search-wrap" data-list-search>
-            <label class="visually-hidden" for="filter-temporary-employees">Buscar empleados temporales</label>
-            <div class="list-search-field">
-                <i class="bi bi-search" aria-hidden="true"></i>
-                <input
-                    id="filter-temporary-employees"
-                    type="search"
-                    placeholder="Buscar por nombre o fecha..."
-                    autocomplete="off"
-                    role="combobox"
-                    aria-autocomplete="list"
-                    aria-expanded="false"
-                    aria-controls="suggestions-temporary-employees"
-                    data-list-search-input
-                >
-            </div>
-            <ul class="list-search-suggestions" id="suggestions-temporary-employees" role="listbox" hidden></ul>
-            <span class="list-search-count" data-search-count></span>
+</div>{{-- /tabla-staff --}}
+
+{{-- ═══════════════════════════════════════════════════════════════════════════
+     PANTALLA 3: TABLA — Empleados Temporales (oculta por defecto)
+     ═══════════════════════════════════════════════════════════════════════════ --}}
+<div id="tabla-temporales" class="d-none">
+
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <button type="button" class="view-back-btn" data-show-view="menu-hub">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
+        </button>
+        <h2 class="h5 mb-0 me-auto">Historial de empleados temporales</h2>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-temporal-marcacion" @disabled($empleadosTemporales->isEmpty())>
+                <i class="bi bi-person-clock me-1" aria-hidden="true"></i>Marcar Asistencia
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-nuevo-temporal">
+                <i class="bi bi-person-plus me-1" aria-hidden="true"></i>Nuevo Temporal
+            </button>
         </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-hover data-table align-middle">
-            <thead class="data-table-head">
-                <tr>
-                    <th>Empleado</th>
-                    <th>Hora de ingreso</th>
-                    <th>Hora de salida</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse ($empleadosTemporales as $empleadoTemporal)
-                    <tr
-                        data-search-row
-                        data-search-value="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }} {{ $empleadoTemporal->hora_ingreso }} {{ $empleadoTemporal->hora_salida }} {{ $empleadoTemporal->agencia_outsourcing }}"
-                        data-suggestion-label="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }}"
-                    >
-                        <td class="data-table-primary">{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }}</td>
-                        <td class="text-nowrap data-table-number">{{ $empleadoTemporal->hora_ingreso ?? '—' }}</td>
-                        <td class="text-nowrap data-table-number">{{ $empleadoTemporal->hora_salida ?? '—' }}</td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="3" class="table-empty-cell">
-                            @include('components.empty-state', [
-                                'title'       => 'No hay empleados temporales registrados',
-                                'description' => 'Registra primero al empleado temporal para luego marcar su horario.',
-                                'actionLabel' => 'Nuevo Emp. Temporal',
-                                'actionUrl'   => '#',
-                                'actionTarget'     => 'modal-nuevo-temporal',
-                                'actionTargetType' => 'modal',
-                            ])
-                        </td>
-                    </tr>
-                @endforelse
-                <tr data-search-empty hidden>
-                    <td colspan="3" class="text-center text-muted py-4">No encontramos empleados temporales que coincidan.</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
 
-{{-- ════════════════════════════════════════════════════════════════
+    <div class="card data-table-card" data-live-region="temporary-employees">
+        <div class="card-header list-card-header">
+            <h2 class="h6 mb-0">Historial de empleados temporales</h2>
+            <div class="list-search-wrap" data-list-search>
+                <label class="visually-hidden" for="filter-temporary-employees">Buscar empleados temporales</label>
+                <div class="list-search-field">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input id="filter-temporary-employees" type="search" placeholder="Buscar por nombre o fecha..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-temporary-employees" data-list-search-input>
+                </div>
+                <ul class="list-search-suggestions" id="suggestions-temporary-employees" role="listbox" hidden></ul>
+                <span class="list-search-count" data-search-count></span>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover data-table align-middle">
+                <thead class="data-table-head">
+                    <tr>
+                        <th>Empleado</th>
+                        <th>Hora de ingreso</th>
+                        <th>Hora de salida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($empleadosTemporales as $empleadoTemporal)
+                        <tr
+                            data-search-row
+                            data-search-value="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }} {{ $empleadoTemporal->hora_ingreso }} {{ $empleadoTemporal->hora_salida }} {{ $empleadoTemporal->agencia_outsourcing }}"
+                            data-suggestion-label="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }}"
+                        >
+                            <td class="data-table-primary">{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }}</td>
+                            <td class="text-nowrap data-table-number">{{ $empleadoTemporal->hora_ingreso ?? '—' }}</td>
+                            <td class="text-nowrap data-table-number">{{ $empleadoTemporal->hora_salida ?? '—' }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="table-empty-cell">
+                                @include('components.empty-state', [
+                                    'title'            => 'No hay empleados temporales registrados',
+                                    'description'      => 'Registra primero al empleado temporal para luego marcar su horario.',
+                                    'actionLabel'      => 'Nuevo Emp. Temporal',
+                                    'actionUrl'        => '#',
+                                    'actionTarget'     => 'modal-nuevo-temporal',
+                                    'actionTargetType' => 'modal',
+                                ])
+                            </td>
+                        </tr>
+                    @endforelse
+                    <tr data-search-empty hidden>
+                        <td colspan="3" class="text-center text-muted py-4">No encontramos empleados temporales que coincidan.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>{{-- /tabla-temporales --}}
+
+{{-- ═══════════════════════════════════════════════════════════════════════════
      MODALES (los formularios viven aquí — sin cambios de backend)
-     ════════════════════════════════════════════════════════════════ --}}
+     ═══════════════════════════════════════════════════════════════════════════ --}}
 
-{{-- ── Modal 1: Marcar Asistencia (Staff) ────────────────────────── --}}
+{{-- Modal 1: Marcar Asistencia (Staff) --}}
 <div class="modal fade asistencia-modal" id="modal-staff" tabindex="-1"
      aria-labelledby="modal-staff-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -290,7 +319,7 @@
                     <span class="modal-title-icon bg-primary bg-opacity-10 text-primary">
                         <i class="bi bi-person-check" aria-hidden="true"></i>
                     </span>
-                    <h2 class="modal-title fs-6 fw-bold" id="modal-staff-title">Marcar asistencia — Staff</h2>
+                    <h2 class="modal-title fs-6 fw-bold" id="modal-staff-title">Marcar asistencia — Personal Fijo</h2>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
@@ -328,7 +357,7 @@
     </div>
 </div>
 
-{{-- ── Modal 2: Marcar Asistencia (Temporal) ─────────────────────── --}}
+{{-- Modal 2: Marcar Asistencia (Temporal) --}}
 <div class="modal fade asistencia-modal" id="modal-temporal-marcacion" tabindex="-1"
      aria-labelledby="modal-temporal-marcacion-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -383,7 +412,7 @@
     </div>
 </div>
 
-{{-- ── Modal 3: Registrar Nuevo Empleado Temporal ─────────────────── --}}
+{{-- Modal 3: Registrar Nuevo Empleado Temporal --}}
 <div class="modal fade asistencia-modal" id="modal-nuevo-temporal" tabindex="-1"
      aria-labelledby="modal-nuevo-temporal-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -428,3 +457,24 @@
 </div>
 
 @endsection
+
+@push('scripts')
+<script>
+(function () {
+    var VIEWS = ['menu-hub', 'tabla-staff', 'tabla-temporales'];
+
+    window.showView = function showView(targetId) {
+        VIEWS.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) { el.classList.toggle('d-none', id !== targetId); }
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-show-view]');
+        if (btn) { showView(btn.dataset.showView); }
+    });
+}());
+</script>
+@endpush

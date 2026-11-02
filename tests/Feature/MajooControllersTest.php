@@ -129,8 +129,8 @@ test('module routes return their expected view data', function (string $routeNam
     ['empleados.index', 'empleados.index', ['empleados']],
     ['inventario.index', 'inventario.index', ['productos', 'movimientos']],
     ['asistencia.index', 'asistencia.index', ['empleados', 'asistencias', 'empleadosTemporales']],
-    ['ventas.index', 'ventas.index', ['productos', 'ventas', 'carrito']],
-    ['ventas.nueva', 'ventas.nueva', ['productos', 'carrito', 'totalCarrito']],
+    ['ventas.index', 'ventas.index', ['ventas', 'carrito']],
+    ['ventas.nueva', 'ventas.pos', ['productos']],
     ['dashboard.index', 'dashboard.index', []],
 ]);
 
@@ -143,17 +143,40 @@ test('administrator views expose the theme selector and all available choices', 
         ->assertSee('<option value="auto">Automático</option>', false);
 });
 
-test('employee sales screen uses the responsive visual point of sale', function () {
-    Producto::factory()->create(['stock_actual' => 4, 'descripcion' => 'Edición especial']);
+test('employee sales routes separate the history from the point of sale', function () {
+    Producto::factory()->create([
+        'stock_actual' => 4,
+        'nombre_producto' => 'Producto de prueba',
+        'descripcion' => 'Edición especial',
+    ]);
+
     $this->actingAs(Empleado::factory()->withAccess('empleado')->make(['id_empleado' => 42]))
         ->get(route('ventas.index'))
+        ->assertOk()
+        ->assertViewIs('ventas.index')
+        ->assertSee('Historial de ventas')
+        ->assertSee('sales-history-view', false)
+        ->assertDontSee('pos-product-grid', false)
+        ->assertDontSee('Producto de prueba')
+        ->assertSee('data-theme-selector', false)
+        ->assertSee('<option value="auto">Automático</option>', false);
+
+    $this->get(route('ventas.nueva'))
         ->assertOk()
         ->assertViewIs('ventas.pos')
         ->assertSee('pos-product-grid', false)
         ->assertSee('Edición especial')
-        ->assertSee('pos-checkout-form', false)
-        ->assertSee('data-theme-selector', false)
-        ->assertSee('<option value="auto">Automático</option>', false);
+        ->assertSee('pos-checkout-form', false);
+});
+
+test('administrator point of sale uses the responsive visual point of sale', function () {
+    Producto::factory()->create(['stock_actual' => 4, 'descripcion' => 'Edición especial']);
+
+    $this->get(route('ventas.nueva'))
+        ->assertViewIs('ventas.pos')
+        ->assertSee('pos-product-grid', false)
+        ->assertSee('Edición especial')
+        ->assertSee('pos-checkout-form', false);
 });
 
 test('employee point of sale renders product images from the public disk', function () {
@@ -167,7 +190,7 @@ test('employee point of sale renders product images from the public disk', funct
     ]);
 
     $this->actingAs(Empleado::factory()->withAccess('empleado')->make(['id_empleado' => 43]))
-        ->get(route('ventas.index'))
+        ->get(route('ventas.nueva'))
         ->assertSee('src="https://cdn.example.test/product-images/productos/mouse.png"', false)
         ->assertSee('https:\\/\\/cdn.example.test\\/product-images\\/productos\\/mouse.png', false);
 });
@@ -187,6 +210,78 @@ test('employee registration and listing do not show employee type', function () 
     ])->assertRedirectToRoute('empleados.index');
 
     expect(Empleado::sole()->es_eventual)->toBeFalse();
+});
+
+test('employee listing keeps identity details in the inspection profile', function () {
+    $empleado = Empleado::factory()->create([
+        'nombres' => 'María Pérez',
+        'documento_identidad' => '12345678',
+        'usuario' => 'maria',
+    ]);
+
+    $this->get(route('empleados.index'))
+        ->assertSee('employee-profile-'.$empleado->id_empleado, false)
+        ->assertSee('ID de empleado')
+        ->assertSee('12345678')
+        ->assertSee('MP')
+        ->assertDontSee('<th>ID</th>', false)
+        ->assertDontSee('<th>Documento</th>', false);
+});
+
+test('employee directory stays behind its view button until requested', function () {
+    Empleado::factory()->create(['nombres' => 'Lucía Torres']);
+
+    $this->get(route('empleados.index'))
+        ->assertSee('Ver empleados')
+        ->assertSee('data-show-employee-view="employee-list"', false)
+        ->assertSee('id="employee-list" class="d-none"', false)
+        ->assertSee('data-live-region="employees"', false);
+});
+
+test('product listing keeps full details in the inspection modal', function () {
+    $producto = Producto::factory()->create([
+        'descripcion' => 'Descripción completa del producto',
+        'imagen_path' => 'productos/imagen.png',
+        'stock_actual' => 4,
+        'stock_minimo_alerta' => 2,
+    ]);
+
+    $this->get(route('productos.index'))
+        ->assertSee('product-inspect-'.$producto->id_producto, false)
+        ->assertSee('Descripción completa del producto')
+        ->assertSee('Stock actual')
+        ->assertSee('Stock mínimo')
+        ->assertDontSee('<th>ID</th>', false)
+        ->assertDontSee('<th>Stock mínimo</th>', false);
+});
+
+test('product image field supports file selection paste and drag and drop', function () {
+    $this->get(route('productos.index'))
+        ->assertSee('data-image-uploader', false)
+        ->assertSee('data-image-input', false)
+        ->assertSee('data-image-dropzone', false)
+        ->assertSee('Enfoca esta área y pega una imagen copiada con Ctrl + V')
+        ->assertSee("dropzone.addEventListener('drop'", false)
+        ->assertSee("uploader.addEventListener('paste'", false)
+        ->assertSee('La imagen no debe superar los 3 MB.');
+});
+
+test('inventory opens on its hub and shows movement history only on request', function () {
+    $this->get(route('inventario.index'))
+        ->assertSee('Ver historial de inventario')
+        ->assertSee('data-show-view="tabla-movimientos"', false)
+        ->assertSee('id="tabla-movimientos" class="d-none"', false)
+        ->assertSee('data-live-region="inventory-movements"', false)
+        ->assertDontSee('data-live-region="inventory-products"', false)
+        ->assertDontSee('<th>Stock actual</th>', false);
+});
+
+test('sales history stays behind its view button until requested', function () {
+    $this->get(route('ventas.index'))
+        ->assertSee('Ver historial de ventas')
+        ->assertSee('data-show-sales-history', false)
+        ->assertSee('id="sales-history-view" class="d-none"', false)
+        ->assertSee('data-live-region="sales"', false);
 });
 
 test('inventory history shows fifteen movements per page', function () {
@@ -609,8 +704,20 @@ test('sale history detail and PDF display the stored fiscal amounts', function (
 
     $this->get(route('ventas.index'))->assertSee('IGV')->assertSee('S/ 10.00')->assertSee('S/ 18.00');
     $this->get(route('ventas.show', $venta))->assertSee('IGV (18.00 %)')->assertSee('TOTAL FINAL')->assertSee('108.00');
+    $this->get(route('ventas.pdf', ['venta' => $venta, 'inline' => true]))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertHeader('Content-Disposition', 'inline; filename=Recibo_Venta_'.$venta->getKey().'.pdf');
     $this->get(route('ventas.pdf', $venta))->assertOk()->assertHeader('Content-Type', 'application/pdf')
         ->assertDownload('Recibo_Venta_'.$venta->getKey().'.pdf');
+
+    $this->get(route('ventas.show', $venta))
+        ->assertSee('Imprimir Ticket')
+        ->assertSee('id="print-ticket-button"', false)
+        ->assertSee('data-print-url="'.route('ventas.pdf', ['venta' => $venta, 'inline' => true]).'"', false)
+        ->assertSee('printFrame.contentWindow', false)
+        ->assertSee('printWindow.print()', false)
+        ->assertDontSee('Descargar PDF');
 
     $html = view('ventas.factura', ['venta' => $venta->fresh(), 'detalles' => $venta->detalles])->render();
     expect($html)->toContain('Subtotal', 'IGV (18.00 %)', 'Descuento aplicado (10.00 %)', '108.00');
@@ -952,7 +1059,6 @@ test('live pages expose automatic refresh regions and searchable suggestions', f
 
 })->with([
     ['productos.index', 'products', true],
-    ['inventario.index', 'inventory-products', true],
     ['inventario.index', 'inventory-movements', true],
     ['ventas.index', 'sales', true],
     ['empleados.index', 'employees', true],
@@ -1048,25 +1154,28 @@ test('populated module views render relations escape names and include protected
     ProductoProveedor::factory()->for($producto, 'producto')->create();
     MovimientoInventario::factory()->for($producto, 'producto')->create();
     $empleado = Empleado::factory()->create(['nombres' => '<b>Ana & José</b>']);
-    Asistencia::factory()->for($empleado, 'empleado')->create();
+    $asistencia = Asistencia::factory()->for($empleado, 'empleado')->create([
+        'fecha' => now()->toDateString(),
+    ]);
     $detalle = DetalleVenta::factory()->for($producto, 'producto')->create(['cantidad' => 2, 'precio_unitario' => '12.50']);
 
     foreach (['productos.index', 'proveedores.index', 'inventario.index'] as $routeName) {
         $this->get(route($routeName))->assertOk()->assertSee($nombre)->assertDontSee($nombre, false)
             ->assertSee('name="_token"', false);
     }
-    foreach (['empleados.index', 'asistencia.index'] as $routeName) {
-        $this->get(route($routeName))->assertOk()->assertSee($empleado->nombres)
-            ->assertDontSee($empleado->nombres, false)->assertSee('value="DELETE"', false);
-    }
+    $this->get(route('empleados.index'))->assertOk()->assertSee($empleado->nombres)
+        ->assertDontSee($empleado->nombres, false)->assertSee('value="DELETE"', false);
+    $this->get(route('asistencia.index'))->assertOk()->assertSee($empleado->nombres)
+        ->assertDontSee($empleado->nombres, false)->assertSee('value="DELETE"', false)
+        ->assertDontSee(route('asistencia.edit', $asistencia));
     $this->get(route('productos.edit', $producto))->assertOk()->assertSee('value="PUT"', false);
     $this->get(route('ventas.show', $detalle->venta))->assertOk()->assertSee($nombre)->assertSee('25.00')
         ->assertSee(route('ventas.pdf', $detalle->venta));
     $this->post(route('ventas.carrito.agregar'), ['id_producto' => $producto->getKey(), 'cantidad' => 1]);
-    foreach (['ventas.index', 'ventas.nueva'] as $routeName) {
-        $this->get(route($routeName))->assertOk()->assertSee($nombre)->assertSee('Confirmar venta')
-            ->assertSee('value="DELETE"', false)->assertSee('name="_token"', false);
-    }
+    $this->get(route('ventas.index'))->assertOk()->assertSee('Ventas registradas')
+        ->assertSee('<table', false)->assertDontSee('Confirmar venta');
+    $this->get(route('ventas.nueva'))->assertOk()->assertSee($nombre)->assertSee('Confirmar venta')
+        ->assertSee('data-pos-add', false)->assertSee('name="_token"', false);
 });
 
 test('long receipts render all sale lines across multiple pages', function () {

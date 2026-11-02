@@ -3,16 +3,117 @@
 @section('title', 'Inventario')
 
 @section('content')
+
+{{-- ═══ Page header ══════════════════════════════════════════════════════════ --}}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-    <div><h1 class="h3 mb-1">Gestión de inventario</h1><p class="text-muted mb-0">Controla existencias y registra entradas.</p></div>
-    <button type="button" class="btn btn-primary rounded-3 px-3 py-2" data-bs-toggle="offcanvas" data-bs-target="#inventory-restock-panel" aria-controls="inventory-restock-panel" @disabled($productos->isEmpty())>+ Registrar entrada</button>
-</div>
-<div class="card mb-4">
-    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
-        <div><h2 class="h6 mb-1">¿Llegó nueva mercancía?</h2><p class="text-muted mb-0">Registra una entrada para actualizar el stock y guardar el movimiento.</p></div>
-        <button type="button" class="btn btn-outline-primary rounded-3 px-3 py-2" data-bs-toggle="offcanvas" data-bs-target="#inventory-restock-panel" aria-controls="inventory-restock-panel" @disabled($productos->isEmpty())>Aumentar inventario</button>
+    <div>
+        <h1 class="h3 mb-1">Gestión de inventario</h1>
+        <p class="text-muted mb-0">Controla existencias y registra entradas.</p>
     </div>
+    <span class="badge rounded-pill text-bg-light border px-3 py-2 fs-6">
+        <i class="bi bi-boxes me-1 text-primary" aria-hidden="true"></i>
+        {{ $productos->count() }} {{ Str::plural('producto', $productos->count()) }}
+    </span>
 </div>
+
+{{-- ═══════════════════════════════════════════════════════════════════════════
+     PANTALLA 1: MENÚ CENTRAL (visible por defecto)
+     ═══════════════════════════════════════════════════════════════════════════ --}}
+<div id="menu-hub">
+
+    <button type="button" class="hub-hero hub-hero-blue" data-show-view="tabla-movimientos" aria-label="Ver historial de inventario">
+        <span class="hub-hero-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
+        <span class="hub-hero-text">
+            <strong>Ver historial de inventario</strong>
+            <span>{{ $movimientos->total() }} {{ Str::plural('movimiento', $movimientos->total()) }} · Consulta entradas y salidas de productos</span>
+        </span>
+        <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
+    </button>
+
+    <div class="hub-cards">
+        <button
+            type="button"
+            class="hub-card"
+            data-bs-toggle="offcanvas"
+            data-bs-target="#inventory-restock-panel"
+            aria-controls="inventory-restock-panel"
+            @disabled($productos->isEmpty())
+        >
+            <span class="hub-card-icon bg-success bg-opacity-10 text-success">
+                <i class="bi bi-plus-circle" aria-hidden="true"></i>
+            </span>
+            <span class="hub-card-text">
+                <strong>Registrar entrada</strong>
+                <span>Aumentar stock existente</span>
+            </span>
+        </button>
+    </div>
+
+</div>{{-- /menu-hub --}}
+
+{{-- ═══════════════════════════════════════════════════════════════════════════
+     PANTALLA 2: TABLA — Historial de movimientos (oculta por defecto)
+     ═══════════════════════════════════════════════════════════════════════════ --}}
+<div id="tabla-movimientos" class="d-none">
+
+    <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+        <button type="button" class="view-back-btn" data-show-view="menu-hub">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
+        </button>
+        <h2 class="h5 mb-0 me-auto">Historial de inventario</h2>
+    </div>
+
+    <div class="card data-table-card" data-live-region="inventory-movements">
+        <div class="card-header list-card-header">
+            <h2 class="h6 mb-0">Movimientos registrados</h2>
+            <div class="list-search-wrap" data-list-search>
+                <label class="visually-hidden" for="filter-movements">Buscar movimientos</label>
+                <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-movements" type="search" placeholder="Buscar movimientos..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-movements" data-list-search-input></div>
+                <ul class="list-search-suggestions" id="suggestions-movements" role="listbox" hidden></ul>
+                <span class="list-search-count" data-search-count></span>
+            </div>
+        </div>
+        <div class="table-responsive"><table class="table table-hover data-table align-middle">
+            <thead class="data-table-head"><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
+            <tbody>
+                @forelse ($movimientos as $movimiento)
+                    <tr data-search-row data-search-value="{{ $movimiento->fecha_hora->format('d/m/Y H:i') }} {{ $movimiento->producto?->nombre_producto }} {{ $movimiento->tipo_movimiento }} {{ $movimiento->cantidad }} {{ $movimiento->motivo }}" data-suggestion-label="{{ $movimiento->producto?->nombre_producto ?? 'Producto eliminado' }} — {{ $movimiento->tipo_movimiento }} {{ $movimiento->cantidad }}">
+                        <td class="text-nowrap data-table-secondary">{{ $movimiento->fecha_hora->format('d/m/Y H:i') }}</td>
+                        <td class="data-table-primary">{{ $movimiento->producto?->nombre_producto ?? 'Producto eliminado' }}</td>
+                        <td>
+                            @if ($movimiento->tipo_movimiento === 'ENTRADA')
+                                <span class="data-badge data-badge-success"><i class="bi bi-arrow-down-left" aria-hidden="true"></i>Entrada</span>
+                            @else
+                                <span class="data-badge data-badge-danger"><i class="bi bi-arrow-up-right" aria-hidden="true"></i>Salida</span>
+                            @endif
+                        </td>
+                        <td class="data-table-number">{{ $movimiento->cantidad }}</td>
+                        <td class="data-table-secondary">{{ $movimiento->motivo ?? '—' }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5" class="table-empty-cell">@include('components.empty-state', [
+                        'title'       => 'Aún no hay movimientos',
+                        'description' => 'Cuando recibas mercancía, registra una entrada.',
+                        'actionUrl'   => '#inventory-restock-panel',
+                        'actionLabel' => 'Registrar una entrada',
+                        'actionTarget' => 'inventory-restock-panel',
+                        'actionTargetType' => 'offcanvas',
+                    ])</td></tr>
+                @endforelse
+                <tr data-search-empty hidden><td colspan="5" class="text-center text-muted py-4">No encontramos movimientos que coincidan.</td></tr>
+            </tbody>
+        </table></div>
+        @if ($movimientos->hasPages())
+            <div class="list-pagination" data-async-pagination>
+                <span>Mostrando {{ $movimientos->firstItem() }}–{{ $movimientos->lastItem() }} de {{ $movimientos->total() }} movimientos</span>
+                {{ $movimientos->links('pagination::bootstrap-5') }}
+            </div>
+        @endif
+    </div>
+
+</div>{{-- /tabla-movimientos --}}
+
+{{-- ═══ Offcanvas: Registrar entrada ════════════════════════════════════════ --}}
 <div class="offcanvas offcanvas-end admin-form-panel" tabindex="-1" id="inventory-restock-panel" aria-labelledby="inventory-restock-title">
     <div class="offcanvas-header border-bottom">
         <div><p class="dashboard-panel-kicker mb-1">EXISTENCIAS</p><h2 class="offcanvas-title h5 fw-bold" id="inventory-restock-title">Registrar entrada</h2></div>
@@ -44,92 +145,38 @@
         @if ($productos->isEmpty())<p class="text-muted mt-3 mb-0">Primero <a href="{{ route('productos.create') }}">registra un producto</a>.</p>@endif
     </div>
 </div>
-<div class="card data-table-card mb-4" data-live-region="inventory-products">
-    <div class="card-header list-card-header">
-        <h2 class="h6 mb-0">Inventario actual</h2>
-        <div class="list-search-wrap" data-list-search>
-            <label class="visually-hidden" for="filter-inventory">Buscar inventario</label>
-            <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-inventory" type="search" placeholder="Buscar productos..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-inventory" data-list-search-input></div>
-            <ul class="list-search-suggestions" id="suggestions-inventory" role="listbox" hidden></ul>
-            <span class="list-search-count" data-search-count></span>
-        </div>
-    </div>
-    <div class="table-responsive"><table class="table table-hover data-table align-middle">
-        <thead class="data-table-head"><tr><th>ID</th><th>Producto</th><th>Stock actual</th><th>Stock mínimo</th><th>Precio</th><th>Estado</th></tr></thead>
-        <tbody>
-            @forelse ($productos as $producto)
-                <tr data-search-row data-search-value="{{ $producto->id_producto }} {{ $producto->nombre_producto }} {{ $producto->stock_actual }} {{ $producto->stock_minimo_alerta }} {{ $producto->precio_venta }} {{ $producto->stock_actual <= $producto->stock_minimo_alerta ? 'stock bajo' : 'disponible' }}" data-suggestion-label="{{ $producto->nombre_producto }} · Stock {{ $producto->stock_actual }}">
-                    <td class="data-table-secondary">#{{ $producto->id_producto }}</td><td class="data-table-primary">{{ $producto->nombre_producto }}</td>
-                    <td class="data-table-number">{{ $producto->stock_actual }}</td><td class="data-table-secondary">{{ $producto->stock_minimo_alerta }}</td>
-                    <td class="data-table-number">S/ {{ number_format((float) $producto->precio_venta, 2) }}</td>
-                    <td>
-                        @if ($producto->stock_actual <= $producto->stock_minimo_alerta)
-                            <span class="data-badge data-badge-danger"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>Stock bajo</span>
-                        @else
-                            <span class="data-badge data-badge-success"><i class="bi bi-check-circle" aria-hidden="true"></i>Disponible</span>
-                        @endif
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="6" class="table-empty-cell">@include('components.empty-state', [
-                    'title' => 'No hay productos en inventario',
-                    'description' => 'Registra un producto antes de gestionar sus existencias.',
-                    'actionUrl' => route('productos.create'),
-                    'actionLabel' => 'Registrar producto',
-                ])</td></tr>
-            @endforelse
-            <tr data-search-empty hidden><td colspan="6" class="text-center text-muted py-4">No encontramos productos que coincidan.</td></tr>
-        </tbody>
-    </table></div>
-</div>
-<div class="card data-table-card" data-live-region="inventory-movements">
-    <div class="card-header list-card-header">
-        <h2 class="h6 mb-0">Historial de movimientos</h2>
-        <div class="list-search-wrap" data-list-search>
-            <label class="visually-hidden" for="filter-movements">Buscar movimientos</label>
-            <div class="list-search-field"><i class="bi bi-search" aria-hidden="true"></i><input id="filter-movements" type="search" placeholder="Buscar movimientos..." autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="suggestions-movements" data-list-search-input></div>
-            <ul class="list-search-suggestions" id="suggestions-movements" role="listbox" hidden></ul>
-            <span class="list-search-count" data-search-count></span>
-        </div>
-    </div>
-    <div class="table-responsive"><table class="table table-hover data-table align-middle">
-        <thead class="data-table-head"><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th>Cantidad</th><th>Motivo</th></tr></thead>
-        <tbody>
-            @forelse ($movimientos as $movimiento)
-                <tr data-search-row data-search-value="{{ $movimiento->fecha_hora->format('d/m/Y H:i') }} {{ $movimiento->producto?->nombre_producto }} {{ $movimiento->tipo_movimiento }} {{ $movimiento->cantidad }} {{ $movimiento->motivo }}" data-suggestion-label="{{ $movimiento->producto?->nombre_producto ?? 'Producto eliminado' }} · {{ $movimiento->tipo_movimiento }} {{ $movimiento->cantidad }}">
-                    <td class="text-nowrap data-table-secondary">{{ $movimiento->fecha_hora->format('d/m/Y H:i') }}</td>
-                    <td class="data-table-primary">{{ $movimiento->producto?->nombre_producto ?? 'Producto eliminado' }}</td>
-                    <td>
-                        @if ($movimiento->tipo_movimiento === 'ENTRADA')
-                            <span class="data-badge data-badge-success"><i class="bi bi-arrow-down-left" aria-hidden="true"></i>Entrada</span>
-                        @else
-                            <span class="data-badge data-badge-danger"><i class="bi bi-arrow-up-right" aria-hidden="true"></i>Salida</span>
-                        @endif
-                    </td>
-                    <td class="data-table-number">{{ $movimiento->cantidad }}</td><td class="data-table-secondary">{{ $movimiento->motivo ?? '—' }}</td>
-                </tr>
-            @empty
-                <tr><td colspan="5" class="table-empty-cell">@include('components.empty-state', [
-                    'title' => 'Aún no hay movimientos',
-                    'description' => 'Cuando recibas mercancía, registra una entrada en el formulario de arriba.',
-                    'actionUrl' => '#inventory-restock-form',
-                    'actionLabel' => 'Registrar una entrada',
-                ])</td></tr>
-            @endforelse
-            <tr data-search-empty hidden><td colspan="5" class="text-center text-muted py-4">No encontramos movimientos que coincidan.</td></tr>
-        </tbody>
-    </table></div>
-    @if ($movimientos->hasPages())
-        <div class="list-pagination" data-async-pagination>
-            <span>Mostrando {{ $movimientos->firstItem() }}–{{ $movimientos->lastItem() }} de {{ $movimientos->total() }} movimientos</span>
-            {{ $movimientos->links('pagination::bootstrap-5') }}
-        </div>
-    @endif
-</div>
+
 @endsection
 
 @push('scripts')
 @if ($errors->any() && old('_form') === 'inventory-restock')
     <script>document.addEventListener('DOMContentLoaded', () => window.appFeedbackReady.then(() => bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('inventory-restock-panel')).show()));</script>
 @endif
+
+<script>
+(function () {
+    var VIEWS = ['menu-hub', 'tabla-movimientos'];
+    var SESSION_KEY = 'inventario-view';
+
+    function showView(targetId) {
+        VIEWS.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) { el.classList.toggle('d-none', id !== targetId); }
+        });
+        try { sessionStorage.setItem(SESSION_KEY, targetId); } catch (_) {}
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-show-view]');
+        if (btn) { showView(btn.dataset.showView); }
+    });
+
+    try {
+        if (sessionStorage.getItem(SESSION_KEY) === 'tabla-movimientos') {
+            showView('tabla-movimientos');
+        }
+    } catch (_) {}
+}());
+</script>
 @endpush

@@ -176,7 +176,7 @@
                 <div class="collapse {{ $inComercial ? 'show' : '' }}" id="nav-comercial">
                     <div class="sidebar-submenu">
                         <a class="sidebar-sublink" href="{{ route('ventas.nueva') }}"
-                           @if(request()->routeIs('ventas.nueva', 'ventas.pos')) aria-current="page" @endif>
+                           @if(request()->routeIs('ventas.nueva')) aria-current="page" @endif>
                             <i class="bi bi-cart-plus" aria-hidden="true"></i>
                             <span>Punto de Venta</span>
                         </a>

@@ -389,7 +389,17 @@ body.app-body {
     background: #fff;
     box-shadow: 0 5px 20px rgba(15, 23, 42, 0.045);
 }
-.metric-card { display: block; padding: 20px; text-decoration: none; }
+.metric-card {
+    display: block;
+    padding: 20px;
+    text-decoration: none;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+.metric-card:focus-visible {
+    border-color: var(--dashboard-indigo);
+    outline: 3px solid rgba(79, 70, 229, 0.22);
+    outline-offset: 3px;
+}
 .metric-card-top { color: #536174; font-size: 0.82rem; font-weight: 550; }
 .metric-icon { display: grid; width: 36px; height: 36px; place-items: center; border-radius: 10px; font-size: 1rem; }
 .metric-icon-indigo { color: var(--dashboard-indigo); background: #eef2ff; }
@@ -419,6 +429,12 @@ body.app-body {
 .metric-stock.no-alerts .metric-icon,
 .metric-stock.no-alerts .metric-value { color: var(--dashboard-emerald); }
 .metric-stock.no-alerts .metric-icon { background: #ecfdf5; }
+.metric-card:hover {
+    transform: translateY(-4px);
+    border-color: #c7d2fe;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.11);
+}
+.metric-card:active { transform: translateY(-1px); }
 
 .dashboard-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .dashboard-panel { padding: 22px; }
