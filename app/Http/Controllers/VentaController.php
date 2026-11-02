@@ -188,27 +188,38 @@ class VentaController extends Controller
             }
 
             // Convertir el porcentaje de descuento a puntos básicos.
-            $descuentoPuntosBase = $this->percentageToBasisPoints((string) $descuentoPorcentaje);
+            $descuentoPuntosBase = $this->percentageToBasisPoints(
+                (string) $descuentoPorcentaje
+            );
 
-            // Calcular el descuento sobre el subtotal original.
-            $descuentoCentimos = intdiv($subtotalCentimos * $descuentoPuntosBase + 5000, 10000);
-
-            // Calcular la base imponible después de aplicar el descuento.
-            $baseImponibleCentimos = $subtotalCentimos - $descuentoCentimos;
-
-            // Calcular el IGV del 18 % sobre la base imponible.
-            $igvCentimos = intdiv($baseImponibleCentimos * self::IGV_PERCENTAGE + 50, 100);
-
-            // Calcular el total final de la venta.
-            $totalCentimos = $baseImponibleCentimos + $igvCentimos;
-
+            // El subtotal contiene precios que YA incluyen IGV.
+            // Aplicar el descuento directamente sobre ese subtotal.
+            $descuentoCentimos = intdiv(
+                $subtotalCentimos * $descuentoPuntosBase + 5000,
+                10000
+            );
+            
+            // El total a pagar es el subtotal con IGV menos el descuento.
+            $totalCentimos = $subtotalCentimos - $descuentoCentimos;
+            
+            // Extraer la base imponible del total después del descuento.
+            // Dividir entre 1.18 equivale a multiplicar por 100 y dividir entre 118.
+            $baseImponibleCentimos = intdiv(
+                $totalCentimos * 100 + 59,
+                118
+            );
+            
+            // El IGV es la diferencia entre el total con impuesto
+            // y la base imponible sin impuesto.
+            $igvCentimos = $totalCentimos - $baseImponibleCentimos;
+            
             // Verificar el límite máximo permitido.
             if ($totalCentimos > self::MAX_AMOUNT_CENTS) {
                 throw ValidationException::withMessages([
                     'carrito' => 'El importe de la venta excede el límite permitido.'
                 ]);
             }
-
+            
             $venta->update([
                 'subtotal_venta' => $this->formatDecimal($subtotalCentimos),
                 'igv_porcentaje' => sprintf('%d.00', self::IGV_PERCENTAGE),

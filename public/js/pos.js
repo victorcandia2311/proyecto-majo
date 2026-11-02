@@ -43,14 +43,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const subtotalCents = [...cart.values()].reduce((sum, item) => sum + Math.round(item.price * 100) * item.quantity, 0);
         const discountValid = discountInput.checkValidity() && discountInput.value.trim() !== '' && Number.isFinite(Number(discountInput.value));
         const discountBasisPoints = discountValid ? Math.round(Number(discountInput.value) * 100) : 0;
-        // Calcular primero el descuento sobre el subtotal.
-        const discountCents = Math.floor((subtotalCents * discountBasisPoints + 5000) / 10000);
-        // Obtener la base imponible después del descuento.
-        const taxableBaseCents = subtotalCents - discountCents;
-        // Calcular el IGV sobre la base imponible descontada.
-        const igvCents = Math.floor((taxableBaseCents * 18 + 50) / 100);
-        // El total final es la base imponible más el IGV.
-        const totalCents = taxableBaseCents + igvCents;
+        // El subtotal ya incluye el IGV.
+        const discountCents = Math.floor(
+            (subtotalCents * discountBasisPoints + 5000) / 10000
+        );
+        
+        // Restar el descuento al subtotal con IGV incluido.
+        const totalCents = subtotalCents - discountCents;
+        
+        // Extraer la base imponible del total con IGV incluido.
+        const taxableBaseCents = Math.floor(
+            (totalCents * 100 + 59) / 118
+        );
+        
+        // El IGV es la diferencia entre el total y la base imponible.
+        const igvCents = totalCents - taxableBaseCents;
         list.replaceChildren();
 
         if (cart.size === 0) {
