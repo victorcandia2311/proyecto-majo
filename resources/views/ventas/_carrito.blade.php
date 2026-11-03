@@ -110,7 +110,7 @@
                     </div>
                 </div>
                 <div class="border-top pt-3 mb-4" data-sale-summary data-subtotal="{{ number_format($totalCarrito, 2, '.', '') }}">
-                    <div class="d-flex justify-content-between mb-2"><span>Subtotal</span><strong id="sale-summary-subtotal">S/ {{ number_format($totalCarrito, 2) }}</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Subtotal (IGV incluido)</span><strong id="sale-summary-subtotal">S/ {{ number_format($totalCarrito, 2) }}</strong></div>
                     <div class="d-flex justify-content-between mb-2"><span>IGV (18 %)</span><strong id="sale-summary-igv">S/ 0.00</strong></div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Descuento (<span id="sale-summary-discount-percentage">0.00</span> %)</span>
@@ -151,23 +151,21 @@ document.addEventListener('DOMContentLoaded', () => {
             Number(discountInput.value) * 100
         );
 
+        // Aplicar el descuento sobre el subtotal que ya incluye IGV.
         const discountCents = Math.floor(
             (subtotalCents * percentageBasisPoints + 5000) / 10000
         );
 
-        // Primero se aplica el descuento al subtotal.
-        const taxableBaseCents = subtotalCents - discountCents;
+        // El total ya incluye IGV.
+        const totalCents = subtotalCents - discountCents;
 
-        // Después se calcula el IGV sobre la base descontada.
-        const igvCents = Math.floor(
-            (taxableBaseCents * 18 + 50) / 100
+        // Extraer la base imponible.
+        const taxableBaseCents = Math.floor(
+            (totalCents * 100 + 59) / 118
         );
 
-        // El total suma la base descontada y el IGV.
-        const totalCents = taxableBaseCents + igvCents;
-
-        const formatCurrency = (cents) =>
-            currency.format(cents / 100);
+        // Extraer el IGV incluido.
+        const igvCents = totalCents - taxableBaseCents;
 
         document.getElementById('sale-summary-discount-percentage').textContent =
             (percentageBasisPoints / 100).toFixed(2);

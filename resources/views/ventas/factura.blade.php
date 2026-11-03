@@ -362,7 +362,7 @@
     <table class="resumen">
         @if ($venta->subtotal_venta !== null)
             <tr>
-                <td>Subtotal</td>
+                <td>Subtotal (IGV incluido)</td>
                 <td class="importe">S/ {{ number_format((float) $venta->subtotal_venta, 2) }}</td>
             </tr>
             <tr>
