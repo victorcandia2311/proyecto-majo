@@ -27,7 +27,7 @@
         <span class="hub-hero-icon"><i class="bi bi-building" aria-hidden="true"></i></span>
         <span class="hub-hero-text">
             <strong>Ver proveedores registrados</strong>
-            <span>{{ $proveedores->count() }} {{ Str::plural('proveedor', $proveedores->count()) }} en el sistema</span>
+            <span>{{ $proveedores->total() }} {{ Str::plural('proveedor', $proveedores->total()) }} en el sistema</span>
         </span>
         <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
     </button>
@@ -37,7 +37,7 @@
         <span class="hub-hero-icon"><i class="bi bi-tag" aria-hidden="true"></i></span>
         <span class="hub-hero-text">
             <strong>Ver precios por proveedor</strong>
-            <span>{{ $precios->count() }} {{ Str::plural('precio', $precios->count()) }} asignado{{ $precios->count() === 1 ? '' : 's' }}</span>
+            <span>{{ $precios->total() }} {{ Str::plural('precio', $precios->total()) }} asignado{{ $precios->total() === 1 ? '' : 's' }}</span>
         </span>
         <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
     </button>
@@ -197,6 +197,12 @@
                 </tbody>
             </table>
         </div>
+        @if ($proveedores->hasPages())
+            <div class="list-pagination" data-async-pagination>
+                <span>Mostrando {{ $proveedores->firstItem() }}–{{ $proveedores->lastItem() }} de {{ $proveedores->total() }} proveedores</span>
+                {{ $proveedores->links('pagination::bootstrap-5') }}
+            </div>
+        @endif
     </div>
 
 </div>{{-- /view-proveedores --}}
@@ -312,6 +318,12 @@
                 </tbody>
             </table>
         </div>
+        @if ($precios->hasPages())
+            <div class="list-pagination" data-async-pagination>
+                <span>Mostrando {{ $precios->firstItem() }}–{{ $precios->lastItem() }} de {{ $precios->total() }} precios</span>
+                {{ $precios->links('pagination::bootstrap-5') }}
+            </div>
+        @endif
     </div>
 
 </div>{{-- /view-precios --}}
@@ -355,7 +367,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
     </div>
     <div class="offcanvas-body">
-        @include('proveedores._precio-form', compact('productos', 'proveedores'))
+        @include('proveedores._precio-form', ['productos' => $productos, 'proveedores' => $proveedoresOptions])
     </div>
 </div>
 

@@ -16,16 +16,30 @@ use Illuminate\View\View;
 
 class AsistenciaController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
+        $filters = $request->validate([
+            'fecha' => ['nullable', 'date_format:Y-m-d'],
+        ]);
+        $fechaTemporales = $filters['fecha'] ?? now()->toDateString();
         $empleados = Empleado::orderBy('nombres')->get();
         $asistencias = Asistencia::with('empleado')
             ->whereDate('fecha', now()->toDateString())
             ->orderByDesc('hora_ingreso')
-            ->get();
+            ->paginate(10, ['*'], 'staff_page')->withQueryString();
         $empleadosTemporales = EmpleadoTemporal::with('empleado')->orderByDesc('id_temporal')->get();
+        $asistenciasTemporales = EmpleadoTemporal::with('empleado')
+            ->whereDate('fecha_inicio', $fechaTemporales)
+            ->orderByDesc('id_temporal')
+            ->paginate(10, ['*'], 'temporary_staff_page')->withQueryString();
 
-        return view('asistencia.index', compact('empleados', 'asistencias', 'empleadosTemporales'));
+        return view('asistencia.index', compact(
+            'empleados',
+            'asistencias',
+            'empleadosTemporales',
+            'asistenciasTemporales',
+            'fechaTemporales',
+        ));
     }
 
     public function inventario(Request $request): View
@@ -35,14 +49,14 @@ class AsistenciaController extends Controller
         ]);
         $fecha = $data['fecha'] ?? now()->toDateString();
 
-        $empleados = Empleado::orderBy('nombres')->get();
+        $empleados = Empleado::orderBy('nombres')->paginate(10, ['*'], 'employees_page')->withQueryString();
         $asistencias = Asistencia::whereDate('fecha', $fecha)
             ->orderByDesc('id_asistencia')->get()
             ->unique('id_empleado')->keyBy('id_empleado');
         $empleadosTemporales = EmpleadoTemporal::with('empleado')
             ->whereDate('fecha_inicio', $fecha)
             ->whereNotNull('hora_ingreso')
-            ->orderBy('nombre_temp')->get();
+            ->orderBy('nombre_temp')->paginate(10, ['*'], 'temporary_employees_page')->withQueryString();
 
         return view('asistencia.inventario', compact('asistencias', 'empleados', 'empleadosTemporales', 'fecha'));
     }

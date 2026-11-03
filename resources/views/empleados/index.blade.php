@@ -7,7 +7,7 @@
     <div><h1 class="h3 mb-1">Gestión de empleados</h1><p class="text-muted mb-0">Registro y administración de empleados.</p></div>
     <span class="badge rounded-pill text-bg-light border px-3 py-2 fs-6">
         <i class="bi bi-people me-1 text-primary" aria-hidden="true"></i>
-        {{ $empleados->count() }} {{ Str::plural('empleado', $empleados->count()) }}
+        {{ $empleados->total() }} {{ Str::plural('empleado', $empleados->total()) }}
     </span>
 </div>
 
@@ -16,7 +16,7 @@
         <span class="hub-hero-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
         <span class="hub-hero-text">
             <strong>Ver empleados</strong>
-            <span>{{ $empleados->count() }} {{ Str::plural('empleado', $empleados->count()) }} registrados en el sistema</span>
+            <span>{{ $empleados->total() }} {{ Str::plural('empleado', $empleados->total()) }} registrados en el sistema</span>
         </span>
         <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
     </button>
@@ -96,6 +96,12 @@
             <tr data-search-empty hidden><td colspan="3" class="text-center text-muted py-4">No encontramos empleados que coincidan.</td></tr>
         </tbody>
     </table></div>
+    @if ($empleados->hasPages())
+        <div class="list-pagination" data-async-pagination>
+            <span>Mostrando {{ $empleados->firstItem() }}–{{ $empleados->lastItem() }} de {{ $empleados->total() }} empleados</span>
+            {{ $empleados->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
 </div>
 </div>
 @foreach ($empleados as $empleado)

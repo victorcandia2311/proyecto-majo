@@ -14,7 +14,7 @@
     </div>
     <span class="badge rounded-pill text-bg-light border px-3 py-2 fs-6">
         <i class="bi bi-box2 me-1 text-primary" aria-hidden="true"></i>
-        {{ $productos->count() }} {{ Str::plural('producto', $productos->count()) }}
+        {{ $productos->total() }} {{ Str::plural('producto', $productos->total()) }}
     </span>
 </div>
 
@@ -171,6 +171,12 @@
                 </tbody>
             </table>
         </div>
+        @if ($productos->hasPages())
+            <div class="list-pagination" data-async-pagination>
+                <span>Mostrando {{ $productos->firstItem() }}–{{ $productos->lastItem() }} de {{ $productos->total() }} productos</span>
+                {{ $productos->links('pagination::bootstrap-5') }}
+            </div>
+        @endif
     </div>
 
 </div>{{-- /view-table --}}

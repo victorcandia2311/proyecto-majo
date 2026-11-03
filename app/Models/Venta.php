@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Venta extends Model
 {
@@ -45,6 +46,11 @@ class Venta extends Model
             'descuento_monto' => 'decimal:2',
             'total_venta' => 'decimal:2',
         ];
+    }
+
+    public function fechaHoraEnPeru(): Carbon
+    {
+        return $this->fecha_hora->copy()->setTimezone('America/Lima');
     }
 
     public function detalles(): HasMany

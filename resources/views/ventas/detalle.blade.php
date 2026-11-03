@@ -19,7 +19,7 @@
 </div>
 <div class="card mb-4"><div class="card-body">
     <dl class="row mb-0">
-        <div class="col-md-3"><dt>Fecha</dt><dd>{{ $venta->fecha_hora->format('d/m/Y H:i:s') }}</dd></div>
+        <div class="col-md-3"><dt>Fecha</dt><dd>{{ $venta->fechaHoraEnPeru()->format('d/m/Y H:i:s') }}</dd></div>
         <div class="col-md-3"><dt>Cliente</dt><dd>{{ $venta->cliente_nombre ?? 'Cliente general' }}</dd></div>
         <div class="col-md-3"><dt>Documento</dt><dd>{{ $venta->cliente_documento ?? '—' }}</dd></div>
         <div class="col-md-3"><dt>Método de pago</dt><dd>{{ $venta->metodo_pago }}</dd></div>

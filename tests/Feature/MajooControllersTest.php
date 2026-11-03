@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -270,7 +271,7 @@ test('inventory opens on its hub and shows movement history only on request', fu
     $this->get(route('inventario.index'))
         ->assertSee('Ver historial de inventario')
         ->assertSee('data-show-view="tabla-movimientos"', false)
-        ->assertSee('id="tabla-movimientos" class="d-none"', false)
+        ->assertSee('id="tabla-movimientos" class="module-hub d-none"', false)
         ->assertSee('data-live-region="inventory-movements"', false)
         ->assertDontSee('data-live-region="inventory-products"', false)
         ->assertDontSee('<th>Stock actual</th>', false);
@@ -284,23 +285,23 @@ test('sales history stays behind its view button until requested', function () {
         ->assertSee('data-live-region="sales"', false);
 });
 
-test('inventory history shows fifteen movements per page', function () {
+test('inventory history shows ten movements per page', function () {
     $producto = Producto::factory()->create();
     MovimientoInventario::factory()->count(16)->for($producto, 'producto')->create();
 
     $response = $this->get(route('inventario.index'))->assertOk();
 
-    expect($response['movimientos']->count())->toBe(15);
+    expect($response['movimientos']->count())->toBe(10);
     expect($response['movimientos']->total())->toBe(16);
     expect($response['movimientos']->url(2))->toContain('page=2');
     $response->assertSee('data-async-pagination', false);
 
     $this->get(route('inventario.index', ['page' => 2]))
         ->assertOk()
-        ->assertViewHas('movimientos', fn ($movimientos) => $movimientos->count() === 1);
+        ->assertViewHas('movimientos', fn ($movimientos) => $movimientos->count() === 6);
 });
 
-test('sales history paginates fifteen records and totals every sale within the selected dates', function () {
+test('sales history paginates ten records and totals every sale within the selected dates', function () {
     Venta::factory()->count(16)->create([
         'fecha_hora' => '2026-10-04 12:00:00',
         'total_venta' => '10.00',
@@ -315,7 +316,7 @@ test('sales history paginates fifteen records and totals every sale within the s
         'fecha_hasta' => '2026-10-05',
     ]))->assertOk()->assertSee('Total de ventas del periodo seleccionado');
 
-    expect($response['ventas']->count())->toBe(15);
+    expect($response['ventas']->count())->toBe(10);
     expect($response['ventas']->total())->toBe(16);
     expect((float) $response['totalVentasFiltradas'])->toBe(160.0);
     expect($response['ventas']->url(2))->toContain('fecha_desde=2026-10-01');
@@ -327,7 +328,93 @@ test('sales history paginates fifteen records and totals every sale within the s
         'fecha_hasta' => '2026-10-05',
         'page' => 2,
     ]))->assertOk()
-        ->assertViewHas('ventas', fn ($ventas) => $ventas->count() === 1);
+        ->assertViewHas('ventas', fn ($ventas) => $ventas->count() === 6);
+});
+
+test('module tables paginate ten records and temporary attendance honors the selected date', function () {
+    $this->travelTo(now()->setDate(2026, 10, 9)->setTime(12, 0));
+
+    $productos = Producto::factory()->count(11)->create();
+    $proveedores = Proveedor::factory()->count(11)->create();
+    foreach ($productos as $index => $producto) {
+        ProductoProveedor::create([
+            'id_producto' => $producto->getKey(),
+            'id_proveedor' => $proveedores[$index]->getKey(),
+            'precio_compra' => '12.50',
+        ]);
+    }
+
+    $empleados = Empleado::factory()->count(11)->create();
+    foreach ($empleados as $empleado) {
+        Asistencia::create([
+            'id_empleado' => $empleado->getKey(),
+            'fecha' => '2026-10-09',
+            'hora_ingreso' => '08:00:00',
+        ]);
+    }
+
+    foreach (range(1, 11) as $number) {
+        EmpleadoTemporal::create([
+            'nombre_temp' => "Temporal de hoy {$number}",
+            'fecha_inicio' => '2026-10-09',
+            'hora_ingreso' => '09:00:00',
+        ]);
+        EmpleadoTemporal::create([
+            'nombre_temp' => "Temporal de ayer {$number}",
+            'fecha_inicio' => '2026-10-08',
+            'hora_ingreso' => '09:00:00',
+        ]);
+    }
+
+    MovimientoInventario::factory()->count(11)->for($productos->first(), 'producto')->create();
+    Venta::factory()->count(11)->create();
+
+    $this->get(route('productos.index'))
+        ->assertViewHas('productos', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertSee('data-async-pagination', false);
+
+    $this->get(route('inventario.index'))
+        ->assertViewHas('movimientos', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertSee('data-async-pagination', false);
+
+    $this->get(route('ventas.index'))
+        ->assertViewHas('ventas', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertSee('data-async-pagination', false);
+
+    $this->get(route('proveedores.index'))
+        ->assertViewHas('proveedores', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertViewHas('proveedoresOptions', fn ($items) => $items->count() === 11)
+        ->assertViewHas('precios', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertSee('data-async-pagination', false);
+
+    $this->get(route('empleados.index'))
+        ->assertViewHas('empleados', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertSee('data-async-pagination', false);
+
+    $attendanceResponse = $this->get(route('asistencia.index'))
+        ->assertViewHas('empleadosTemporales', fn ($items) => $items->count() === 22)
+        ->assertViewHas('asistencias', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertViewHas('asistenciasTemporales', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertSee('temporary_staff_page=2')
+        ->assertSee('09/10/2026')
+        ->assertSee('value="2026-10-09"', false);
+
+    expect($attendanceResponse['asistenciasTemporales']->url(2))->toContain('temporary_staff_page=2');
+
+    $selectedDateResponse = $this->get(route('asistencia.index', ['fecha' => '2026-10-08']))
+        ->assertViewHas('asistenciasTemporales', fn ($items) => $items->count() === 10
+            && $items->total() === 11
+            && $items->first()->fecha_inicio === '2026-10-08')
+        ->assertSee('value="2026-10-08"', false);
+
+    expect($selectedDateResponse['asistenciasTemporales']->url(2))
+        ->toContain('fecha=2026-10-08')
+        ->toContain('temporary_staff_page=2');
+
+    $this->get(route('asistencia.inventario', ['fecha' => '2026-10-09']))
+        ->assertViewHas('empleados', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertViewHas('empleadosTemporales', fn ($items) => $items->count() === 10 && $items->total() === 11)
+        ->assertSee('data-async-pagination', false);
 });
 
 test('sales history hides the period total when no date filter is selected', function () {
@@ -595,6 +682,28 @@ test('checkout uses current product prices records details and stock exits then 
     $this->post(route('ventas.confirmar'), ['metodo_pago' => 'Yape'])
         ->assertSessionHasErrors(['carrito' => 'El carrito está vacío.']);
     $this->assertDatabaseCount('venta', 1);
+});
+
+test('sale timestamps are stored in UTC and displayed in Peru local time', function () {
+    $this->travelTo('2026-11-03 14:30:00');
+    $producto = Producto::factory()->create(['stock_actual' => 2, 'precio_venta' => '10.00']);
+
+    $response = $this->postJson(route('ventas.confirmar'), [
+        'metodo_pago' => 'Efectivo',
+        'items' => [['id_producto' => $producto->getKey(), 'cantidad' => 1]],
+    ])->assertCreated();
+
+    $venta = Venta::findOrFail($response->json('venta_id'));
+    $this->assertDatabaseHas('venta', [
+        'id_venta' => $venta->getKey(),
+        'fecha_hora' => '2026-11-03 14:30:00',
+    ]);
+
+    $this->get(route('ventas.index'))
+        ->assertSee('03/11/2026 09:30')
+        ->assertSee('data-search-date="2026-11-03"', false);
+    $this->get(route('ventas.show', $venta))
+        ->assertSee('03/11/2026 09:30:00');
 });
 
 test('JSON point of sale checkout uses database prices and updates inventory without a session cart', function () {
@@ -924,7 +1033,7 @@ test('temporary employees can be registered by name only and appear in their sea
     expect($periodo->fecha_fin)->toBeNull();
 
     $this->get(route('asistencia.index'))->assertOk()
-        ->assertSee('Historial de empleados temporales')
+        ->assertSee('Asistencia de empleados temporales')
         ->assertSee('Ana Temporal')
         ->assertSee('Hora de ingreso')
         ->assertSee('Hora de salida')
@@ -1042,8 +1151,10 @@ test('attendance page displays a fallback for a record without a related employe
     view()->share('errors', new ViewErrorBag);
     $html = view('asistencia.index', [
         'empleados' => collect(),
-        'asistencias' => collect([$asistencia]),
+        'asistencias' => new LengthAwarePaginator(collect([$asistencia]), 1, 10),
         'empleadosTemporales' => collect(),
+        'asistenciasTemporales' => new LengthAwarePaginator(collect(), 0, 10),
+        'fechaTemporales' => now()->toDateString(),
     ])->render();
 
     expect($html)->toContain('Empleado eliminado')->toContain('—');

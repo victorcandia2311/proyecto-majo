@@ -34,7 +34,7 @@ class VentaController extends Controller
             ->when($fechaHasta, fn ($query) => $query->whereDate('fecha_hora', '<=', $fechaHasta));
         $filtrandoPorFecha = $fechaDesde !== null || $fechaHasta !== null;
         $totalVentasFiltradas = $filtrandoPorFecha ? (clone $ventasQuery)->sum('total_venta') : null;
-        $ventas = $ventasQuery->orderByDesc('fecha_hora')->paginate(15)->withQueryString();
+        $ventas = $ventasQuery->orderByDesc('fecha_hora')->paginate(10)->withQueryString();
         $carrito = $request->session()->get('carrito', []);
         $totalCarrito = $this->formatDecimal($this->cartSubtotalInCents($carrito));
 
@@ -137,7 +137,7 @@ class VentaController extends Controller
                 'cliente_nombre' => $data['cliente_nombre'] ?? null,
                 'cliente_documento' => $data['cliente_documento'] ?? null,
                 'metodo_pago' => $data['metodo_pago'],
-                'fecha_hora' => now(),
+                'fecha_hora' => now('UTC'),
                 'total_venta' => '0.00',
             ]);
             $subtotalCentimos = 0;
@@ -184,28 +184,28 @@ class VentaController extends Controller
                 $subtotalCentimos * $descuentoPuntosBase + 5000,
                 10000
             );
-            
+
             // El total a pagar es el subtotal con IGV menos el descuento.
             $totalCentimos = $subtotalCentimos - $descuentoCentimos;
-            
+
             // Extraer la base imponible del total después del descuento.
             // Dividir entre 1.18 equivale a multiplicar por 100 y dividir entre 118.
             $baseImponibleCentimos = intdiv(
                 $totalCentimos * 100 + 59,
                 118
             );
-            
+
             // El IGV es la diferencia entre el total con impuesto
             // y la base imponible sin impuesto.
             $igvCentimos = $totalCentimos - $baseImponibleCentimos;
-            
+
             // Verificar el límite máximo permitido.
             if ($totalCentimos > self::MAX_AMOUNT_CENTS) {
                 throw ValidationException::withMessages([
                     'carrito' => 'El importe de la venta excede el límite permitido.',
                 ]);
             }
-            
+
             $venta->update([
                 'subtotal_venta' => $this->formatDecimal($subtotalCentimos),
                 'igv_porcentaje' => sprintf('%d.00', self::IGV_PERCENTAGE),

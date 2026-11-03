@@ -288,14 +288,14 @@
                     <tr>
                         <td class="etiqueta">FECHA</td>
                         <td class="valor">
-                            {{ $venta->fecha_hora->format('d/m/Y') }}
+                            {{ $venta->fechaHoraEnPeru()->format('d/m/Y') }}
                         </td>
                     </tr>
 
                     <tr>
                         <td class="etiqueta">HORA</td>
                         <td class="valor">
-                            {{ $venta->fecha_hora->format('H:i') }}
+                            {{ $venta->fechaHoraEnPeru()->format('H:i') }}
                         </td>
                     </tr>
 

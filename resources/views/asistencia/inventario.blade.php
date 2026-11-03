@@ -58,6 +58,12 @@
             </tbody>
         </table>
     </div>
+    @if ($empleados->hasPages())
+        <div class="list-pagination" data-async-pagination>
+            <span>Mostrando {{ $empleados->firstItem() }}–{{ $empleados->lastItem() }} de {{ $empleados->total() }} empleados</span>
+            {{ $empleados->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
 </div>
 
 <div class="card data-table-card">
@@ -85,5 +91,11 @@
             </tbody>
         </table>
     </div>
+    @if ($empleadosTemporales->hasPages())
+        <div class="list-pagination" data-async-pagination>
+            <span>Mostrando {{ $empleadosTemporales->firstItem() }}–{{ $empleadosTemporales->lastItem() }} de {{ $empleadosTemporales->total() }} empleados temporales</span>
+            {{ $empleadosTemporales->links('pagination::bootstrap-5') }}
+        </div>
+    @endif
 </div>
 @endsection

@@ -16,12 +16,19 @@ class ProveedorController extends Controller
 {
     public function index(): View
     {
-        $proveedores = Proveedor::orderBy('id_proveedor')->get();
+        $proveedores = Proveedor::orderBy('id_proveedor')->paginate(10, ['*'], 'suppliers_page');
+        $proveedoresOptions = Proveedor::orderBy('nombre_empresa')->get();
         $productos = Producto::orderBy('nombre_producto')->get();
-        $precios = ProductoProveedor::with(['producto', 'proveedor'])->get()
-            ->sortBy(['producto.nombre_producto', 'proveedor.nombre_empresa'])->values();
+        $precios = ProductoProveedor::query()
+            ->join('producto', 'producto.id_producto', '=', 'producto_proveedor.id_producto')
+            ->join('proveedor', 'proveedor.id_proveedor', '=', 'producto_proveedor.id_proveedor')
+            ->select('producto_proveedor.*')
+            ->with(['producto', 'proveedor'])
+            ->orderBy('producto.nombre_producto')
+            ->orderBy('proveedor.nombre_empresa')
+            ->paginate(10, ['*'], 'prices_page');
 
-        return view('proveedores.index', compact('proveedores', 'productos', 'precios'));
+        return view('proveedores.index', compact('proveedores', 'proveedoresOptions', 'productos', 'precios'));
     }
 
     public function asignarProducto(): View

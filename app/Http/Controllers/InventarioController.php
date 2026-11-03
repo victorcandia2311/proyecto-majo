@@ -16,7 +16,7 @@ class InventarioController extends Controller
     public function index(): View
     {
         $productos = Producto::orderBy('nombre_producto')->get();
-        $movimientos = MovimientoInventario::with('producto')->orderByDesc('fecha_hora')->paginate(15);
+        $movimientos = MovimientoInventario::with('producto')->orderByDesc('fecha_hora')->paginate(10);
 
         return view('inventario.index', compact('productos', 'movimientos'));
     }

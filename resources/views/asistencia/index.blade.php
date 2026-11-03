@@ -224,6 +224,12 @@
                 </tbody>
             </table>
         </div>
+        @if ($asistencias->hasPages())
+            <div class="list-pagination" data-async-pagination>
+                <span>Mostrando {{ $asistencias->firstItem() }}–{{ $asistencias->lastItem() }} de {{ $asistencias->total() }} asistencias</span>
+                {{ $asistencias->links('pagination::bootstrap-5') }}
+            </div>
+        @endif
     </div>
 
 </div>{{-- /tabla-staff --}}
@@ -237,7 +243,7 @@
         <button type="button" class="view-back-btn" data-show-view="menu-hub">
             <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
         </button>
-        <h2 class="h5 mb-0 me-auto">Historial de empleados temporales</h2>
+        <h2 class="h5 mb-0 me-auto">Asistencia de empleados temporales</h2>
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-temporal-marcacion" @disabled($empleadosTemporales->isEmpty())>
                 <i class="bi bi-person-clock me-1" aria-hidden="true"></i>Marcar Asistencia
@@ -250,7 +256,15 @@
 
     <div class="card data-table-card" data-live-region="temporary-employees">
         <div class="card-header list-card-header">
-            <h2 class="h6 mb-0">Historial de empleados temporales</h2>
+            <h2 class="h6 mb-0">Asistencia de empleados temporales</h2>
+            <form action="{{ route('asistencia.index') }}" method="GET" class="d-flex align-items-end gap-2">
+                <div>
+                    <label class="form-label small mb-1" for="temporary-attendance-date">Fecha</label>
+                    <input id="temporary-attendance-date" name="fecha" type="date" value="{{ $fechaTemporales }}" class="form-control form-control-sm">
+                </div>
+                <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+                <a href="{{ route('asistencia.index') }}" class="btn btn-light btn-sm">Hoy</a>
+            </form>
             <div class="list-search-wrap" data-list-search>
                 <label class="visually-hidden" for="filter-temporary-employees">Buscar empleados temporales</label>
                 <div class="list-search-field">
@@ -271,19 +285,20 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($empleadosTemporales as $empleadoTemporal)
+                    @forelse ($asistenciasTemporales as $empleadoTemporal)
                         <tr
                             data-search-row
-                            data-search-value="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }} {{ $empleadoTemporal->hora_ingreso }} {{ $empleadoTemporal->hora_salida }} {{ $empleadoTemporal->agencia_outsourcing }}"
-                            data-suggestion-label="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }}"
+                            data-search-value="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }} {{ Illuminate\Support\Carbon::parse($empleadoTemporal->fecha_inicio)->format('d/m/Y') }} {{ $empleadoTemporal->hora_ingreso }} {{ $empleadoTemporal->hora_salida }} {{ $empleadoTemporal->agencia_outsourcing }}"
+                            data-suggestion-label="{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }} — {{ Illuminate\Support\Carbon::parse($empleadoTemporal->fecha_inicio)->format('d/m/Y') }}"
                         >
                             <td class="data-table-primary">{{ $empleadoTemporal->nombre_temp ?? $empleadoTemporal->empleado?->nombres ?? 'Empleado eliminado' }}</td>
+                            <td class="text-nowrap data-table-secondary">{{ Illuminate\Support\Carbon::parse($empleadoTemporal->fecha_inicio)->format('d/m/Y') }}</td>
                             <td class="text-nowrap data-table-number">{{ $empleadoTemporal->hora_ingreso ?? '—' }}</td>
                             <td class="text-nowrap data-table-number">{{ $empleadoTemporal->hora_salida ?? '—' }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="3" class="table-empty-cell">
+                            <td colspan="4" class="table-empty-cell">
                                 @include('components.empty-state', [
                                     'title'            => 'No hay empleados temporales registrados',
                                     'description'      => 'Registra primero al empleado temporal para luego marcar su horario.',
@@ -296,11 +311,17 @@
                         </tr>
                     @endforelse
                     <tr data-search-empty hidden>
-                        <td colspan="3" class="text-center text-muted py-4">No encontramos empleados temporales que coincidan.</td>
+                        <td colspan="4" class="text-center text-muted py-4">No encontramos empleados temporales que coincidan.</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        @if ($asistenciasTemporales->hasPages())
+            <div class="list-pagination" data-async-pagination>
+                <span>Mostrando {{ $asistenciasTemporales->firstItem() }}–{{ $asistenciasTemporales->lastItem() }} de {{ $asistenciasTemporales->total() }} asistencias temporales</span>
+                {{ $asistenciasTemporales->links('pagination::bootstrap-5') }}
+            </div>
+        @endif
     </div>
 
 </div>{{-- /tabla-temporales --}}

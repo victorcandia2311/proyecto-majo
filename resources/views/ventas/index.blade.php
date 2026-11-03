@@ -81,12 +81,12 @@
                 @forelse ($ventas as $venta)
                     <tr
                         data-search-row
-                        data-search-date="{{ $venta->fecha_hora->format('Y-m-d') }}"
-                        data-search-value="{{ $venta->id_venta }} {{ $venta->fecha_hora->format('d/m/Y H:i') }} {{ $venta->cliente_nombre ?? 'cliente general' }} {{ $venta->cliente_documento }} {{ $venta->metodo_pago }} {{ $venta->igv_monto }} {{ $venta->descuento_porcentaje }} {{ $venta->descuento_monto }} {{ $venta->total_venta }}"
+                        data-search-date="{{ $venta->fechaHoraEnPeru()->format('Y-m-d') }}"
+                        data-search-value="{{ $venta->id_venta }} {{ $venta->fechaHoraEnPeru()->format('d/m/Y H:i') }} {{ $venta->cliente_nombre ?? 'cliente general' }} {{ $venta->cliente_documento }} {{ $venta->metodo_pago }} {{ $venta->igv_monto }} {{ $venta->descuento_porcentaje }} {{ $venta->descuento_monto }} {{ $venta->total_venta }}"
                         data-suggestion-label="#{{ $venta->id_venta }} · {{ $venta->cliente_nombre ?? 'Cliente general' }} · {{ $venta->metodo_pago }}"
                     >
                         <td class="data-table-secondary">#{{ $venta->id_venta }}</td>
-                        <td class="text-nowrap data-table-secondary">{{ $venta->fecha_hora->format('d/m/Y H:i') }}</td>
+                        <td class="text-nowrap data-table-secondary">{{ $venta->fechaHoraEnPeru()->format('d/m/Y H:i') }}</td>
                         <td class="data-table-primary">{{ $venta->cliente_nombre ?? 'Cliente general' }}</td>
                         <td><span class="data-badge data-badge-neutral">{{ $venta->metodo_pago }}</span></td>
                         <td class="data-table-number">{{ $venta->descuento_porcentaje !== null ? number_format((float) $venta->descuento_porcentaje, 2).' %' : 'No registrado' }}</td>

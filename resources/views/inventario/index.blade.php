@@ -19,7 +19,7 @@
 {{-- ═══════════════════════════════════════════════════════════════════════════
      PANTALLA 1: MENÚ CENTRAL (visible por defecto)
      ═══════════════════════════════════════════════════════════════════════════ --}}
-<div id="menu-hub">
+<div id="menu-hub" class="module-hub">
 
     <button type="button" class="hub-hero hub-hero-blue" data-show-view="tabla-movimientos" aria-label="Ver historial de inventario">
         <span class="hub-hero-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
@@ -54,7 +54,7 @@
 {{-- ═══════════════════════════════════════════════════════════════════════════
      PANTALLA 2: TABLA — Historial de movimientos (oculta por defecto)
      ═══════════════════════════════════════════════════════════════════════════ --}}
-<div id="tabla-movimientos" class="d-none">
+<div id="tabla-movimientos" class="module-hub d-none">
 
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
         <button type="button" class="view-back-btn" data-show-view="menu-hub">
