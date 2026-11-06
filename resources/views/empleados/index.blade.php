@@ -11,33 +11,8 @@
     </span>
 </div>
 
-<div id="employee-view-hub" class="module-hub">
-    <button type="button" class="hub-hero hub-hero-blue" data-show-employee-view="employee-list" aria-label="Ver empleados registrados">
-        <span class="hub-hero-icon"><i class="bi bi-people" aria-hidden="true"></i></span>
-        <span class="hub-hero-text">
-            <strong>Ver empleados</strong>
-            <span>{{ $empleados->total() }} {{ Str::plural('empleado', $empleados->total()) }} registrados en el sistema</span>
-        </span>
-        <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
-    </button>
-    <div class="hub-cards">
-        <button type="button" class="hub-card" data-bs-toggle="modal" data-bs-target="#employee-create-modal">
-            <span class="hub-card-icon bg-primary bg-opacity-10 text-primary">
-                <i class="bi bi-person-plus" aria-hidden="true"></i>
-            </span>
-            <span class="hub-card-text">
-                <strong>Registrar empleado</strong>
-                <span>Agregar una persona al equipo</span>
-            </span>
-        </button>
-    </div>
-</div>
-
-<div id="employee-list" class="d-none">
+<div id="employee-list">
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <button type="button" class="view-back-btn" data-show-employee-view="employee-view-hub">
-            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
-        </button>
         <h2 class="h5 mb-0 me-auto">Empleados registrados</h2>
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#employee-create-modal">
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Registrar empleado
@@ -139,7 +114,7 @@
         </div>
     </div>
 @endforeach
-<div class="modal fade" id="employee-create-modal" tabindex="-1" aria-labelledby="employee-create-title" aria-hidden="true">
+<div class="modal fade admin-form-modal" id="employee-create-modal" tabindex="-1" aria-labelledby="employee-create-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header">
@@ -162,29 +137,4 @@
 @if ($errors->any() && old('_form') === 'employee-create')
     <script>document.addEventListener('DOMContentLoaded', () => bootstrap.Modal.getOrCreateInstance(document.getElementById('employee-create-modal')).show());</script>
 @endif
-<script>
-(function () {
-    var views = ['employee-view-hub', 'employee-list'];
-    var sessionKey = 'empleados-view';
-
-    function showView(targetId) {
-        views.forEach(function (id) {
-            document.getElementById(id).classList.toggle('d-none', id !== targetId);
-        });
-        try { sessionStorage.setItem(sessionKey, targetId); } catch (_) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    document.addEventListener('click', function (event) {
-        var button = event.target.closest('[data-show-employee-view]');
-        if (button) { showView(button.dataset.showEmployeeView); }
-    });
-
-    try {
-        if (sessionStorage.getItem(sessionKey) === 'employee-list') {
-            showView('employee-list');
-        }
-    } catch (_) {}
-}());
-</script>
 @endpush

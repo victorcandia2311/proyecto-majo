@@ -60,9 +60,6 @@
         <h1 class="h3 mb-1">Control de asistencia</h1>
         <p class="text-muted mb-0">Marca el ingreso y la salida de los empleados para registrar sus horas trabajadas.</p>
     </div>
-    <a href="{{ route('asistencia.inventario') }}" class="btn btn-outline-primary btn-sm align-self-start">
-        <i class="bi bi-clipboard-data me-1" aria-hidden="true"></i>Inventario de asistencia
-    </a>
 </div>
 
 {{-- ═══════════════════════════════════════════════════════════════════════════
@@ -138,12 +135,17 @@
      PANTALLA 2: TABLA — Asistencias de Staff (oculta por defecto)
      ═══════════════════════════════════════════════════════════════════════════ --}}
 <div id="tabla-staff" class="d-none">
+    @php
+        $tituloAsistencias = $fechaAsistencias === now()->toDateString()
+            ? 'Asistencias registradas hoy'
+            : 'Asistencias registradas el '.Illuminate\Support\Carbon::parse($fechaAsistencias)->format('d/m/Y');
+    @endphp
 
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
         <button type="button" class="view-back-btn" data-show-view="menu-hub">
             <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
         </button>
-        <h2 class="h5 mb-0 me-auto">Asistencias registradas hoy</h2>
+        <h2 class="h5 mb-0 me-auto">{{ $tituloAsistencias }}</h2>
         <button
             type="button"
             class="btn btn-primary btn-sm"
@@ -157,7 +159,23 @@
 
     <div class="card data-table-card mb-4" data-live-region="attendance">
         <div class="card-header list-card-header">
-            <h2 class="h6 mb-0">Asistencias registradas hoy</h2>
+            <h2 class="h6 mb-0">{{ $tituloAsistencias }}</h2>
+            <form action="{{ route('asistencia.index') }}" method="GET" class="d-flex align-items-end gap-2">
+                <input type="hidden" name="vista" value="tabla-staff">
+                <div>
+                    <label class="form-label small mb-1" for="staff-attendance-date">Fecha</label>
+                    <input
+                        id="staff-attendance-date"
+                        name="fecha_asistencias"
+                        type="date"
+                        value="{{ $fechaAsistencias }}"
+                        class="form-control form-control-sm"
+                        required
+                    >
+                </div>
+                <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+                <a href="{{ route('asistencia.index', ['vista' => 'tabla-staff']) }}" class="btn btn-light btn-sm">Hoy</a>
+            </form>
             <div class="list-search-wrap" data-list-search>
                 <label class="visually-hidden" for="filter-attendance">Buscar asistencias</label>
                 <div class="list-search-field">
@@ -258,12 +276,13 @@
         <div class="card-header list-card-header">
             <h2 class="h6 mb-0">Asistencia de empleados temporales</h2>
             <form action="{{ route('asistencia.index') }}" method="GET" class="d-flex align-items-end gap-2">
+                <input type="hidden" name="vista" value="tabla-temporales">
                 <div>
                     <label class="form-label small mb-1" for="temporary-attendance-date">Fecha</label>
                     <input id="temporary-attendance-date" name="fecha" type="date" value="{{ $fechaTemporales }}" class="form-control form-control-sm">
                 </div>
                 <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
-                <a href="{{ route('asistencia.index') }}" class="btn btn-light btn-sm">Hoy</a>
+                <a href="{{ route('asistencia.index', ['vista' => 'tabla-temporales']) }}" class="btn btn-light btn-sm">Hoy</a>
             </form>
             <div class="list-search-wrap" data-list-search>
                 <label class="visually-hidden" for="filter-temporary-employees">Buscar empleados temporales</label>
@@ -331,7 +350,7 @@
      ═══════════════════════════════════════════════════════════════════════════ --}}
 
 {{-- Modal 1: Marcar Asistencia (Staff) --}}
-<div class="modal fade asistencia-modal" id="modal-staff" tabindex="-1"
+<div class="modal fade asistencia-modal admin-form-modal" id="modal-staff" tabindex="-1"
      aria-labelledby="modal-staff-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -379,7 +398,7 @@
 </div>
 
 {{-- Modal 2: Marcar Asistencia (Temporal) --}}
-<div class="modal fade asistencia-modal" id="modal-temporal-marcacion" tabindex="-1"
+<div class="modal fade asistencia-modal admin-form-modal" id="modal-temporal-marcacion" tabindex="-1"
      aria-labelledby="modal-temporal-marcacion-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -434,7 +453,7 @@
 </div>
 
 {{-- Modal 3: Registrar Nuevo Empleado Temporal --}}
-<div class="modal fade asistencia-modal" id="modal-nuevo-temporal" tabindex="-1"
+<div class="modal fade asistencia-modal admin-form-modal" id="modal-nuevo-temporal" tabindex="-1"
      aria-labelledby="modal-nuevo-temporal-title" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -496,6 +515,11 @@
         var btn = e.target.closest('[data-show-view]');
         if (btn) { showView(btn.dataset.showView); }
     });
+
+    var activeView = @json($vistaActiva);
+    if (activeView !== 'menu-hub') {
+        showView(activeView);
+    }
 }());
 </script>
 @endpush

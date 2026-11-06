@@ -75,6 +75,7 @@
 
             <nav class="sidebar-nav" aria-label="Navegación principal">
 
+                @if(auth()->user()->isAdmin())
                 {{-- ── 1. Principal ── --}}
                 <div class="sidebar-section-label">PRINCIPAL</div>
                 <a class="sidebar-link" href="{{ route('dashboard.index') }}"
@@ -82,8 +83,6 @@
                     <i class="bi bi-speedometer2" aria-hidden="true"></i>
                     <span>Dashboard</span>
                 </a>
-
-                @if(auth()->user()->isAdmin())
 
                 {{-- ── 2. Gestión de Inventario ── --}}
                 @php

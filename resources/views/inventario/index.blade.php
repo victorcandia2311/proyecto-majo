@@ -16,51 +16,19 @@
     </span>
 </div>
 
-{{-- ═══════════════════════════════════════════════════════════════════════════
-     PANTALLA 1: MENÚ CENTRAL (visible por defecto)
-     ═══════════════════════════════════════════════════════════════════════════ --}}
-<div id="menu-hub" class="module-hub">
-
-    <button type="button" class="hub-hero hub-hero-blue" data-show-view="tabla-movimientos" aria-label="Ver historial de inventario">
-        <span class="hub-hero-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
-        <span class="hub-hero-text">
-            <strong>Ver historial de inventario</strong>
-            <span>{{ $movimientos->total() }} {{ Str::plural('movimiento', $movimientos->total()) }} · Consulta entradas y salidas de productos</span>
-        </span>
-        <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
-    </button>
-
-    <div class="hub-cards">
-        <button
-            type="button"
-            class="hub-card"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#inventory-restock-panel"
-            aria-controls="inventory-restock-panel"
-            @disabled($productos->isEmpty())
-        >
-            <span class="hub-card-icon bg-success bg-opacity-10 text-success">
-                <i class="bi bi-plus-circle" aria-hidden="true"></i>
-            </span>
-            <span class="hub-card-text">
-                <strong>Registrar entrada</strong>
-                <span>Aumentar stock existente</span>
-            </span>
-        </button>
-    </div>
-
-</div>{{-- /menu-hub --}}
-
-{{-- ═══════════════════════════════════════════════════════════════════════════
-     PANTALLA 2: TABLA — Historial de movimientos (oculta por defecto)
-     ═══════════════════════════════════════════════════════════════════════════ --}}
-<div id="tabla-movimientos" class="module-hub d-none">
+<div id="tabla-movimientos" class="module-hub">
 
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <button type="button" class="view-back-btn" data-show-view="menu-hub">
-            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
-        </button>
         <h2 class="h5 mb-0 me-auto">Historial de inventario</h2>
+        <button
+            type="button"
+            class="btn btn-success btn-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#inventory-restock-modal"
+            @disabled($productos->isEmpty())
+        >
+            <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Registrar entrada
+        </button>
     </div>
 
     <div class="card data-table-card" data-live-region="inventory-movements">
@@ -94,10 +62,10 @@
                     <tr><td colspan="5" class="table-empty-cell">@include('components.empty-state', [
                         'title'       => 'Aún no hay movimientos',
                         'description' => 'Cuando recibas mercancía, registra una entrada.',
-                        'actionUrl'   => '#inventory-restock-panel',
+                        'actionUrl'   => '#inventory-restock-modal',
                         'actionLabel' => 'Registrar una entrada',
-                        'actionTarget' => 'inventory-restock-panel',
-                        'actionTargetType' => 'offcanvas',
+                        'actionTarget' => 'inventory-restock-modal',
+                        'actionTargetType' => 'modal',
                     ])</td></tr>
                 @endforelse
                 <tr data-search-empty hidden><td colspan="5" class="text-center text-muted py-4">No encontramos movimientos que coincidan.</td></tr>
@@ -113,36 +81,45 @@
 
 </div>{{-- /tabla-movimientos --}}
 
-{{-- ═══ Offcanvas: Registrar entrada ════════════════════════════════════════ --}}
-<div class="offcanvas offcanvas-end admin-form-panel" tabindex="-1" id="inventory-restock-panel" aria-labelledby="inventory-restock-title">
-    <div class="offcanvas-header border-bottom">
-        <div><p class="dashboard-panel-kicker mb-1">EXISTENCIAS</p><h2 class="offcanvas-title h5 fw-bold" id="inventory-restock-title">Registrar entrada</h2></div>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
-    </div>
-    <div class="offcanvas-body">
-        <form id="inventory-restock-form" action="{{ route('inventario.aumentar') }}" method="POST">
-            @csrf
-            <input type="hidden" name="_form" value="inventory-restock">
-            <div class="mb-3">
-                <label for="inventory-product" class="form-label">Producto</label>
-                <select name="id_producto" id="inventory-product" class="form-select" data-native-select required>
-                    <option value="">Seleccionar producto</option>
-                    @foreach ($productos as $producto)
-                        <option value="{{ $producto->id_producto }}" @selected(old('id_producto') == $producto->id_producto)>{{ $producto->nombre_producto }} — Stock: {{ $producto->stock_actual }}</option>
-                    @endforeach
-                </select>
+<div class="modal fade admin-form-modal" id="inventory-restock-modal" tabindex="-1" aria-labelledby="inventory-restock-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <p class="dashboard-panel-kicker mb-1">EXISTENCIAS</p>
+                    <h2 class="modal-title h5 fw-bold" id="inventory-restock-title">Registrar entrada</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <div class="mb-3">
-                <label for="inventory-quantity" class="form-label">Cantidad a ingresar</label>
-                <input type="number" id="inventory-quantity" name="cantidad" value="{{ old('cantidad', 1) }}" min="1" max="2147483647" step="1" class="form-control" required>
+            <div class="modal-body">
+                <form id="inventory-restock-form" action="{{ route('inventario.aumentar') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="_form" value="inventory-restock">
+                    <div class="mb-3">
+                        <label for="inventory-product" class="form-label">Producto</label>
+                        <select name="id_producto" id="inventory-product" class="form-select" data-native-select required>
+                            <option value="">Seleccionar producto</option>
+                            @foreach ($productos as $producto)
+                                <option value="{{ $producto->id_producto }}" @selected(old('id_producto') == $producto->id_producto)>{{ $producto->nombre_producto }} — Stock: {{ $producto->stock_actual }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="inventory-quantity" class="form-label">Cantidad a ingresar</label>
+                        <input type="number" id="inventory-quantity" name="cantidad" value="{{ old('cantidad', 1) }}" min="1" max="2147483647" step="1" class="form-control" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="inventory-reason" class="form-label">Motivo <span class="text-muted">(opcional)</span></label>
+                        <input type="text" id="inventory-reason" name="motivo" value="{{ old('motivo') }}" maxlength="200" placeholder="Reabastecimiento" class="form-control">
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success" @disabled($productos->isEmpty())>Confirmar entrada</button>
+                    </div>
+                </form>
+                @if ($productos->isEmpty())<p class="text-muted mt-3 mb-0">Primero <a href="{{ route('productos.create') }}">registra un producto</a>.</p>@endif
             </div>
-            <div class="mb-4">
-                <label for="inventory-reason" class="form-label">Motivo <span class="text-muted">(opcional)</span></label>
-                <input type="text" id="inventory-reason" name="motivo" value="{{ old('motivo') }}" maxlength="200" placeholder="Reabastecimiento" class="form-control">
-            </div>
-            <button type="submit" class="btn btn-primary rounded-3 px-4 py-2 w-100" @disabled($productos->isEmpty())>Confirmar entrada</button>
-        </form>
-        @if ($productos->isEmpty())<p class="text-muted mt-3 mb-0">Primero <a href="{{ route('productos.create') }}">registra un producto</a>.</p>@endif
+        </div>
     </div>
 </div>
 
@@ -150,33 +127,7 @@
 
 @push('scripts')
 @if ($errors->any() && old('_form') === 'inventory-restock')
-    <script>document.addEventListener('DOMContentLoaded', () => window.appFeedbackReady.then(() => bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('inventory-restock-panel')).show()));</script>
+    <script>document.addEventListener('DOMContentLoaded', () => window.appFeedbackReady.then(() => bootstrap.Modal.getOrCreateInstance(document.getElementById('inventory-restock-modal')).show()));</script>
 @endif
 
-<script>
-(function () {
-    var VIEWS = ['menu-hub', 'tabla-movimientos'];
-    var SESSION_KEY = 'inventario-view';
-
-    function showView(targetId) {
-        VIEWS.forEach(function (id) {
-            var el = document.getElementById(id);
-            if (el) { el.classList.toggle('d-none', id !== targetId); }
-        });
-        try { sessionStorage.setItem(SESSION_KEY, targetId); } catch (_) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    document.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-show-view]');
-        if (btn) { showView(btn.dataset.showView); }
-    });
-
-    try {
-        if (sessionStorage.getItem(SESSION_KEY) === 'tabla-movimientos') {
-            showView('tabla-movimientos');
-        }
-    } catch (_) {}
-}());
-</script>
 @endpush

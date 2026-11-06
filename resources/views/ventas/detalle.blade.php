@@ -41,8 +41,8 @@
             @endforelse
         </tbody>
         <tfoot>
-            @if ($venta->subtotal_venta !== null)
-                <tr><th colspan="3" class="text-end">SUBTOTAL</th><th class="data-table-number">S/ {{ number_format((float) $venta->subtotal_venta, 2) }}</th></tr>
+            @if ($venta->subtotalNeto() !== null)
+                <tr><th colspan="3" class="text-end">SUBTOTAL (SIN IGV)</th><th class="data-table-number">S/ {{ number_format((float) $venta->subtotalNeto(), 2) }}</th></tr>
                 <tr><th colspan="3" class="text-end">Descuento ({{ number_format((float) $venta->descuento_porcentaje, 2) }} %)</th><th class="data-table-number">S/ {{ number_format((float) $venta->descuento_monto, 2) }}</th></tr>
                 <tr><th colspan="3" class="text-end">IGV ({{ number_format((float) $venta->igv_porcentaje, 2) }} %)</th><th class="data-table-number">S/ {{ number_format((float) $venta->igv_monto, 2) }}</th></tr>
             @else

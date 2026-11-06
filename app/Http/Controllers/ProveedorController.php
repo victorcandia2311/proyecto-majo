@@ -16,19 +16,35 @@ class ProveedorController extends Controller
 {
     public function index(): View
     {
-        $proveedores = Proveedor::orderBy('id_proveedor')->paginate(10, ['*'], 'suppliers_page');
-        $proveedoresOptions = Proveedor::orderBy('nombre_empresa')->get();
-        $productos = Producto::orderBy('nombre_producto')->get();
-        $precios = ProductoProveedor::query()
-            ->join('producto', 'producto.id_producto', '=', 'producto_proveedor.id_producto')
-            ->join('proveedor', 'proveedor.id_proveedor', '=', 'producto_proveedor.id_proveedor')
-            ->select('producto_proveedor.*')
-            ->with(['producto', 'proveedor'])
-            ->orderBy('producto.nombre_producto')
-            ->orderBy('proveedor.nombre_empresa')
-            ->paginate(10, ['*'], 'prices_page');
+        $proveedores = Proveedor::with(['productosProveedores.producto'])
+            ->orderBy('id_proveedor')
+            ->paginate(10, ['*'], 'suppliers_page');
+        $productos = Producto::query()
+            ->select(['id_producto', 'nombre_producto'])
+            ->orderBy('nombre_producto')
+            ->get();
+        $productosDisponiblesPorProveedor = $proveedores->getCollection()->mapWithKeys(function (Proveedor $proveedor) use ($productos): array {
+            $productosAsignados = $proveedor->productosProveedores->pluck('id_producto');
 
-        return view('proveedores.index', compact('proveedores', 'proveedoresOptions', 'productos', 'precios'));
+            return [
+                $proveedor->getKey() => $productos->reject(
+                    fn (Producto $producto): bool => $productosAsignados->contains($producto->getKey())
+                ),
+            ];
+        });
+
+        return view('proveedores.index', compact('proveedores', 'productosDisponiblesPorProveedor'));
+    }
+
+    public function productos(Proveedor $proveedor): View
+    {
+        $proveedor->load(['productosProveedores.producto']);
+        $productosDisponibles = Producto::query()
+            ->whereNotIn('id_producto', $proveedor->productosProveedores()->select('id_producto'))
+            ->orderBy('nombre_producto')
+            ->get();
+
+        return view('proveedores.productos', compact('proveedor', 'productosDisponibles'));
     }
 
     public function asignarProducto(): View
@@ -83,6 +99,32 @@ class ProveedorController extends Controller
         return to_route('proveedores.index')->with('feedback_success', 'Precio de proveedor registrado correctamente.');
     }
 
+    public function guardarPrecioProveedor(Request $request, Proveedor $proveedor): RedirectResponse
+    {
+        $data = $request->validate([
+            'id_producto' => [
+                'required',
+                'integer',
+                Rule::exists(Producto::class, 'id_producto')->whereNull('deleted_at'),
+            ],
+            'precio_compra' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:99999999.99'],
+        ]);
+
+        try {
+            $proveedor->productosProveedores()->create($data);
+        } catch (UniqueConstraintViolationException $exception) {
+            throw ValidationException::withMessages([
+                'id_producto' => 'Este producto ya tiene un precio registrado para este proveedor.',
+            ]);
+        }
+
+        $redirect = $request->boolean('_return_to_list')
+            ? to_route('proveedores.index')->with('supplier_products_modal', $proveedor->getKey())
+            : to_route('proveedores.productos', $proveedor);
+
+        return $redirect->with('feedback_success', 'Producto y precio registrados correctamente.');
+    }
+
     public function actualizarPrecio(Request $request, Proveedor $proveedor, Producto $producto): RedirectResponse
     {
         $data = $request->validate([
@@ -92,13 +134,21 @@ class ProveedorController extends Controller
         $precio = $proveedor->productosProveedores()->where('id_producto', $producto->getKey())->firstOrFail();
         $precio->update($data);
 
-        return to_route('proveedores.index')->with('feedback_success', 'Precio de proveedor actualizado correctamente.');
+        $redirect = $request->boolean('_return_to_list')
+            ? to_route('proveedores.index')
+            : to_route('proveedores.productos', $proveedor);
+
+        return $redirect->with('feedback_success', 'Precio de proveedor actualizado correctamente.');
     }
 
-    public function eliminarPrecio(Proveedor $proveedor, Producto $producto): RedirectResponse
+    public function eliminarPrecio(Request $request, Proveedor $proveedor, Producto $producto): RedirectResponse
     {
         $proveedor->productosProveedores()->where('id_producto', $producto->getKey())->firstOrFail()->delete();
 
-        return to_route('proveedores.index')->with('feedback_success', 'Precio de proveedor eliminado correctamente.');
+        $redirect = $request->boolean('_return_to_list')
+            ? to_route('proveedores.index')
+            : to_route('proveedores.productos', $proveedor);
+
+        return $redirect->with('feedback_success', 'Precio de proveedor eliminado correctamente.');
     }
 }

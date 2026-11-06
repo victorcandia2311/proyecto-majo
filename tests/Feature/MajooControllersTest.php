@@ -125,7 +125,7 @@ test('module routes return their expected view data', function (string $routeNam
 })->with([
     ['productos.index', 'productos.index', ['productos']],
     ['productos.create', 'productos.crear', []],
-    ['proveedores.index', 'proveedores.index', ['proveedores', 'productos', 'precios']],
+    ['proveedores.index', 'proveedores.index', ['proveedores']],
     ['proveedores.asignar-producto', 'proveedores.asignar_producto', ['proveedores', 'productos']],
     ['empleados.index', 'empleados.index', ['empleados']],
     ['inventario.index', 'inventario.index', ['productos', 'movimientos']],
@@ -138,6 +138,7 @@ test('module routes return their expected view data', function (string $routeNam
 test('administrator views expose the theme selector and all available choices', function () {
     $this->get(route('dashboard.index'))
         ->assertOk()
+        ->assertSee('<span>Dashboard</span>', false)
         ->assertSee('data-theme-selector', false)
         ->assertSee('<option value="light">Claro</option>', false)
         ->assertSee('<option value="dark">Oscuro</option>', false)
@@ -157,6 +158,8 @@ test('employee sales routes separate the history from the point of sale', functi
         ->assertViewIs('ventas.index')
         ->assertSee('Historial de ventas')
         ->assertSee('sales-history-view', false)
+        ->assertSee('<span>Punto de Venta</span>', false)
+        ->assertDontSee('<span>Dashboard</span>', false)
         ->assertDontSee('pos-product-grid', false)
         ->assertDontSee('Producto de prueba')
         ->assertSee('data-theme-selector', false)
@@ -167,7 +170,10 @@ test('employee sales routes separate the history from the point of sale', functi
         ->assertViewIs('ventas.pos')
         ->assertSee('pos-product-grid', false)
         ->assertSee('Edición especial')
+        ->assertSee('Subtotal (sin IGV)')
         ->assertSee('pos-checkout-form', false);
+
+    $this->get(route('dashboard.index'))->assertForbidden();
 });
 
 test('administrator point of sale uses the responsive visual point of sale', function () {
@@ -177,6 +183,7 @@ test('administrator point of sale uses the responsive visual point of sale', fun
         ->assertViewIs('ventas.pos')
         ->assertSee('pos-product-grid', false)
         ->assertSee('Edición especial')
+        ->assertSee('Subtotal (sin IGV)')
         ->assertSee('pos-checkout-form', false);
 });
 
@@ -229,14 +236,19 @@ test('employee listing keeps identity details in the inspection profile', functi
         ->assertDontSee('<th>Documento</th>', false);
 });
 
-test('employee directory stays behind its view button until requested', function () {
-    Empleado::factory()->create(['nombres' => 'Lucía Torres']);
+test('employee directory appears immediately with its registration button', function () {
+    $empleado = Empleado::factory()->create(['nombres' => 'Lucía Torres']);
 
     $this->get(route('empleados.index'))
-        ->assertSee('Ver empleados')
-        ->assertSee('data-show-employee-view="employee-list"', false)
-        ->assertSee('id="employee-list" class="d-none"', false)
-        ->assertSee('data-live-region="employees"', false);
+        ->assertDontSee('Ver empleados')
+        ->assertDontSee('data-show-employee-view', false)
+        ->assertDontSee('Registrar empleado</strong>')
+        ->assertSee('id="employee-list"', false)
+        ->assertDontSee('id="employee-list" class="d-none"', false)
+        ->assertSee('data-live-region="employees"', false)
+        ->assertSee($empleado->nombres)
+        ->assertSee('data-bs-target="#employee-create-modal"', false)
+        ->assertSee('Registrar empleado');
 });
 
 test('product listing keeps full details in the inspection modal', function () {
@@ -254,6 +266,47 @@ test('product listing keeps full details in the inspection modal', function () {
         ->assertSee('Stock mínimo')
         ->assertDontSee('<th>ID</th>', false)
         ->assertDontSee('<th>Stock mínimo</th>', false);
+});
+
+test('products with no stock are shown as unavailable in the catalog and details', function () {
+    Producto::factory()->create([
+        'nombre_producto' => 'Producto agotado',
+        'stock_actual' => 0,
+        'stock_minimo_alerta' => 5,
+    ]);
+
+    $this->get(route('productos.index'))
+        ->assertSee('No disponible')
+        ->assertDontSee('>Disponible</span>', false)
+        ->assertSee('data-search-value="', false)
+        ->assertSee('no disponible', false);
+});
+
+test('product edit action opens a floating form and reopens it after validation errors', function () {
+    $producto = Producto::factory()->create(['nombre_producto' => 'Producto original']);
+
+    $this->get(route('productos.index'))
+        ->assertSee('data-bs-target="#product-edit-modal-'.$producto->id_producto.'"', false)
+        ->assertSee('id="product-edit-modal-'.$producto->id_producto.'"', false)
+        ->assertSee('action="'.route('productos.update', $producto).'"', false)
+        ->assertDontSee('<a href="'.route('productos.edit', $producto).'"', false);
+
+    $this->from(route('productos.index'))
+        ->followingRedirects()
+        ->put(route('productos.update', $producto), [
+            '_form' => 'product-edit-'.$producto->id_producto,
+            'nombre_producto' => '',
+            'stock_minimo_alerta' => 2,
+            'precio_venta' => '12.50',
+        ])
+        ->assertSee('data-auto-open', false)
+        ->assertSee('product-edit-modal-'.$producto->id_producto, false)
+        ->assertSee('is-invalid', false);
+
+    $this->assertDatabaseHas('producto', [
+        'id_producto' => $producto->id_producto,
+        'nombre_producto' => 'Producto original',
+    ]);
 });
 
 test('product image field supports file selection paste and drag and drop', function () {
@@ -331,7 +384,7 @@ test('sales history paginates ten records and totals every sale within the selec
         ->assertViewHas('ventas', fn ($ventas) => $ventas->count() === 6);
 });
 
-test('module tables paginate ten records and temporary attendance honors the selected date', function () {
+test('module tables paginate ten records and attendance honors the selected date', function () {
     $this->travelTo(now()->setDate(2026, 10, 9)->setTime(12, 0));
 
     $productos = Producto::factory()->count(11)->create();
@@ -352,6 +405,11 @@ test('module tables paginate ten records and temporary attendance honors the sel
             'hora_ingreso' => '08:00:00',
         ]);
     }
+    Asistencia::create([
+        'id_empleado' => $empleados->first()->getKey(),
+        'fecha' => '2026-10-08',
+        'hora_ingreso' => '09:00:00',
+    ]);
 
     foreach (range(1, 11) as $number) {
         EmpleadoTemporal::create([
@@ -383,8 +441,6 @@ test('module tables paginate ten records and temporary attendance honors the sel
 
     $this->get(route('proveedores.index'))
         ->assertViewHas('proveedores', fn ($items) => $items->count() === 10 && $items->total() === 11)
-        ->assertViewHas('proveedoresOptions', fn ($items) => $items->count() === 11)
-        ->assertViewHas('precios', fn ($items) => $items->count() === 10 && $items->total() === 11)
         ->assertSee('data-async-pagination', false);
 
     $this->get(route('empleados.index'))
@@ -397,7 +453,9 @@ test('module tables paginate ten records and temporary attendance honors the sel
         ->assertViewHas('asistenciasTemporales', fn ($items) => $items->count() === 10 && $items->total() === 11)
         ->assertSee('temporary_staff_page=2')
         ->assertSee('09/10/2026')
-        ->assertSee('value="2026-10-09"', false);
+        ->assertSee('value="2026-10-09"', false)
+        ->assertSee('name="fecha_asistencias"', false)
+        ->assertDontSee('Inventario de asistencia');
 
     expect($attendanceResponse['asistenciasTemporales']->url(2))->toContain('temporary_staff_page=2');
 
@@ -410,6 +468,17 @@ test('module tables paginate ten records and temporary attendance honors the sel
     expect($selectedDateResponse['asistenciasTemporales']->url(2))
         ->toContain('fecha=2026-10-08')
         ->toContain('temporary_staff_page=2');
+
+    $selectedStaffDateResponse = $this->get(route('asistencia.index', [
+        'fecha_asistencias' => '2026-10-08',
+        'vista' => 'tabla-staff',
+    ]))
+        ->assertViewHas('vistaActiva', 'tabla-staff')
+        ->assertViewHas('asistencias', fn ($items) => $items->count() === 1
+            && $items->total() === 1
+            && $items->first()->fecha->toDateString() === '2026-10-08')
+        ->assertSee('value="2026-10-08"', false)
+        ->assertSee('Asistencias registradas el 08/10/2026');
 
     $this->get(route('asistencia.inventario', ['fecha' => '2026-10-09']))
         ->assertViewHas('empleados', fn ($items) => $items->count() === 10 && $items->total() === 11)
@@ -435,6 +504,7 @@ test('edit and detail routes bind legacy primary keys', function (string $modelC
         ->assertViewHas($variable, fn (Model $value): bool => $value->is($model));
 })->with([
     [Producto::class, 'productos.edit', 'productos.editar', 'producto'],
+    [Proveedor::class, 'proveedores.productos', 'proveedores.productos', 'proveedor'],
     [Empleado::class, 'empleados.edit', 'empleados.editar', 'empleado'],
     [Asistencia::class, 'asistencia.edit', 'asistencia.editar', 'asistencia'],
     [Venta::class, 'ventas.show', 'ventas.detalle', 'venta'],
@@ -568,12 +638,12 @@ test('supplier CRUD and purchase prices respect both pivot keys', function () {
     $other = ProductoProveedor::factory()->for($producto, 'producto')->create(['precio_compra' => '7.00']);
 
     $this->put(route('proveedores.precios.update', [$proveedor, $producto]), ['precio_compra' => '9.50'])
-        ->assertRedirectToRoute('proveedores.index');
+        ->assertRedirectToRoute('proveedores.productos', $proveedor);
     $this->assertDatabaseHas('producto_proveedor', [...$data, 'precio_compra' => '9.50']);
     expect($other->fresh()->precio_compra)->toBe('7.00');
 
     $this->delete(route('proveedores.precios.destroy', [$proveedor, $producto]))
-        ->assertRedirectToRoute('proveedores.index');
+        ->assertRedirectToRoute('proveedores.productos', $proveedor);
     $this->assertDatabaseMissing('producto_proveedor', ['id_producto' => $producto->getKey(), 'id_proveedor' => $proveedor->getKey()]);
     $this->put(route('proveedores.update', $proveedor), ['nombre_empresa' => 'Proveedor B'])
         ->assertRedirectToRoute('proveedores.index');
@@ -585,7 +655,9 @@ test('supplier CRUD and purchase prices respect both pivot keys', function () {
 test('supplier and sales lists expose search and date filters', function () {
     $this->get(route('proveedores.index'))->assertOk()
         ->assertSee('data-live-region="suppliers"', false)
-        ->assertSee('data-live-region="supplier-prices"', false)
+        ->assertSee('Proveedores registrados')
+        ->assertDontSee('Ver precios por proveedor')
+        ->assertDontSee('data-live-region="supplier-prices"', false)
         ->assertSee('data-list-search-input', false);
 
     Venta::factory()->create(['fecha_hora' => now()]);
@@ -593,6 +665,117 @@ test('supplier and sales lists expose search and date filters', function () {
         ->assertSee('data-date-filter-start', false)
         ->assertSee('data-date-filter-end', false)
         ->assertSee('data-search-date="'.now()->format('Y-m-d').'"', false);
+});
+
+test('a supplier detail shows only its products and editable purchase prices', function () {
+    $proveedor = Proveedor::factory()->create(['nombre_empresa' => 'Proveedor principal']);
+    $otroProveedor = Proveedor::factory()->create(['nombre_empresa' => 'Otro proveedor']);
+    $producto = Producto::factory()->create([
+        'nombre_producto' => 'Producto principal',
+        'imagen_path' => 'productos/producto-principal.jpg',
+    ]);
+    $productoSinImagen = Producto::factory()->create(['nombre_producto' => 'Producto sin imagen']);
+    $otroProducto = Producto::factory()->create(['nombre_producto' => 'Producto de otro proveedor']);
+
+    ProductoProveedor::create([
+        'id_producto' => $producto->getKey(),
+        'id_proveedor' => $proveedor->getKey(),
+        'precio_compra' => '12.50',
+    ]);
+    ProductoProveedor::create([
+        'id_producto' => $productoSinImagen->getKey(),
+        'id_proveedor' => $proveedor->getKey(),
+        'precio_compra' => '7.00',
+    ]);
+    ProductoProveedor::create([
+        'id_producto' => $otroProducto->getKey(),
+        'id_proveedor' => $otroProveedor->getKey(),
+        'precio_compra' => '9.00',
+    ]);
+
+    $this->get(route('proveedores.index'))
+        ->assertSee('data-bs-target="#supplier-products-modal-'.$proveedor->getKey().'"', false)
+        ->assertSee('Agregar producto')
+        ->assertSee('data-bs-target="#supplier-product-create-'.$proveedor->getKey().'"', false)
+        ->assertSee('bi-eye', false)
+        ->assertSee('bi-pencil', false)
+        ->assertSee('bi-trash3', false)
+        ->assertSee('class="supplier-product-card"', false)
+        ->assertSee('src="'.Storage::disk('public')->url('productos/producto-principal.jpg').'"', false)
+        ->assertSee(route('proveedores.precios.update', [$proveedor, $producto]), false)
+        ->assertSee('name="id_producto"', false)
+        ->assertDontSee('href="'.route('proveedores.productos', $proveedor).'"', false);
+
+    $this->get(route('proveedores.productos', $proveedor))
+        ->assertViewIs('proveedores.productos')
+        ->assertSee('data-live-region="supplier-products"', false)
+        ->assertSee('class="supplier-product-card"', false)
+        ->assertSee('data-search-value="Producto principal 12.50"', false)
+        ->assertDontSee('data-search-value="Producto de otro proveedor 9.00"', false)
+        ->assertDontSee('<option value="'.$producto->getKey().'"', false)
+        ->assertSee('src="'.Storage::disk('public')->url('productos/producto-principal.jpg').'"', false)
+        ->assertSee('src="'.asset('images/product-placeholder.svg').'"', false)
+        ->assertSee('name="precio_compra"', false)
+        ->assertSee(route('proveedores.precios.update', [$proveedor, $producto]), false);
+});
+
+test('products can be added to a supplier from its product list', function () {
+    $proveedor = Proveedor::factory()->create();
+    $producto = Producto::factory()->create();
+    $data = ['id_producto' => $producto->getKey(), 'precio_compra' => '8.25'];
+
+    $this->post(route('proveedores.productos.store', $proveedor), $data)
+        ->assertRedirectToRoute('proveedores.productos', $proveedor);
+
+    $this->assertDatabaseHas('producto_proveedor', [
+        ...$data,
+        'id_proveedor' => $proveedor->getKey(),
+    ]);
+
+    $this->post(route('proveedores.productos.store', $proveedor), $data)
+        ->assertSessionHasErrors([
+            'id_producto' => 'Este producto ya tiene un precio registrado para este proveedor.',
+        ]);
+
+    $productoArchivado = Producto::factory()->create();
+    $productoArchivado->delete();
+
+    $this->post(route('proveedores.productos.store', $proveedor), [
+        'id_producto' => $productoArchivado->getKey(),
+        'precio_compra' => '5.00',
+    ])->assertSessionHasErrors('id_producto');
+});
+
+test('a product added from a supplier modal returns to the open products list', function () {
+    $proveedor = Proveedor::factory()->create();
+    $producto = Producto::factory()->create();
+
+    $this->post(route('proveedores.productos.store', $proveedor), [
+        'id_producto' => $producto->getKey(),
+        'precio_compra' => '8.25',
+        '_form' => 'proveedor-producto-'.$proveedor->getKey(),
+        '_return_to_list' => '1',
+    ])->assertRedirectToRoute('proveedores.index')
+        ->assertSessionHas('supplier_products_modal', $proveedor->getKey());
+
+    $this->assertDatabaseHas('producto_proveedor', [
+        'id_producto' => $producto->getKey(),
+        'id_proveedor' => $proveedor->getKey(),
+        'precio_compra' => '8.25',
+    ]);
+
+    $this->get(route('proveedores.index'))
+        ->assertSee('id="supplier-products-modal-'.$proveedor->getKey().'"', false)
+        ->assertSee('data-auto-open="true"', false)
+        ->assertSee($producto->nombre_producto);
+});
+
+test('employees cannot access supplier product prices', function () {
+    $proveedor = Proveedor::factory()->create();
+
+    $this->actingAs(Empleado::factory()->withAccess('empleado')->make(['id_empleado' => 44]))
+        ->get(route('proveedores.productos', $proveedor))
+        ->assertForbidden();
 });
 
 test('checkout accepts only an eight-digit DNI or eleven-digit RUC', function () {
@@ -614,6 +797,21 @@ test('a supplier cannot update a product price belonging to another supplier', f
     $this->put(route('proveedores.precios.update', [$other, $precio->producto]), ['precio_compra' => '1.00'])
         ->assertNotFound();
     expect($precio->fresh()->precio_compra)->toBe($precio->precio_compra);
+});
+
+test('purchase price changes from the supplier modal return to the supplier list', function () {
+    $precio = ProductoProveedor::factory()->create(['precio_compra' => '5.00']);
+
+    $this->put(route('proveedores.precios.update', [$precio->proveedor, $precio->producto]), [
+        'precio_compra' => '6.25',
+        '_return_to_list' => '1',
+    ])->assertRedirectToRoute('proveedores.index');
+
+    $this->assertDatabaseHas('producto_proveedor', [
+        'id_producto' => $precio->id_producto,
+        'id_proveedor' => $precio->id_proveedor,
+        'precio_compra' => '6.25',
+    ]);
 });
 
 test('restocking adds stock and an inventory entry together', function () {
@@ -800,19 +998,28 @@ test('legacy sale details and PDF keep the original total when fiscal data is ab
     expect($html)->toContain('Importe original registrado', 'No registrado', '25.00');
 });
 
-test('sale history detail and PDF display the stored fiscal amounts', function () {
+test('sale history detail and invoice calculate subtotal as final total minus IGV', function () {
     $venta = Venta::factory()->create([
-        'subtotal_venta' => '100.00',
+        'subtotal_venta' => '650.00',
         'igv_porcentaje' => '18.00',
-        'igv_monto' => '18.00',
-        'descuento_porcentaje' => '10.00',
-        'descuento_monto' => '10.00',
-        'total_venta' => '108.00',
+        'igv_monto' => '84.28',
+        'descuento_porcentaje' => '15.00',
+        'descuento_monto' => '97.50',
+        'total_venta' => '552.50',
     ]);
-    DetalleVenta::factory()->for($venta, 'venta')->create(['cantidad' => 1, 'precio_unitario' => '100.00']);
+    DetalleVenta::factory()->for($venta, 'venta')->create(['cantidad' => 1, 'precio_unitario' => '650.00']);
 
-    $this->get(route('ventas.index'))->assertSee('IGV')->assertSee('S/ 10.00')->assertSee('S/ 18.00');
-    $this->get(route('ventas.show', $venta))->assertSee('IGV (18.00 %)')->assertSee('TOTAL FINAL')->assertSee('108.00');
+    $this->get(route('ventas.index'))
+        ->assertSee('Subtotal (sin IGV)')
+        ->assertSee('S/ 468.22')
+        ->assertSee('S/ 84.28')
+        ->assertSee('S/ 552.50');
+    $this->get(route('ventas.show', $venta))
+        ->assertSee('SUBTOTAL (SIN IGV)')
+        ->assertSee('S/ 468.22')
+        ->assertSee('IGV (18.00 %)')
+        ->assertSee('TOTAL FINAL')
+        ->assertSee('552.50');
     $this->get(route('ventas.pdf', ['venta' => $venta, 'inline' => true]))
         ->assertOk()
         ->assertHeader('Content-Type', 'application/pdf')
@@ -829,8 +1036,8 @@ test('sale history detail and PDF display the stored fiscal amounts', function (
         ->assertDontSee('Descargar PDF');
 
     $html = view('ventas.factura', ['venta' => $venta->fresh(), 'detalles' => $venta->detalles])->render();
-    expect($html)->toContain('Subtotal', 'IGV (18.00 %)', 'Descuento aplicado (10.00 %)', '108.00');
-    expect(substr_count($html, 'S/ 18.00'))->toBe(1);
+    expect($html)->toContain('Subtotal (sin IGV)', 'S/ 468.22', 'IGV (18.00 %)', 'Descuento aplicado (15.00 %)', '552.50');
+    expect(substr_count($html, 'S/ 84.28'))->toBe(1);
 });
 
 test('checkout rolls back when the tax makes the total exceed the stored monetary range', function () {
@@ -1103,6 +1310,7 @@ test('clock in and out require an open attendance and allow a later shift', func
 test('dashboard totals distinguish current previous and future months and per-product stock limits', function () {
     $this->travelTo(now()->setDate(2026, 9, 25));
     $producto = Producto::factory()->create(['stock_actual' => 12, 'stock_minimo_alerta' => 15]);
+    $agotado = Producto::factory()->create(['stock_actual' => 0, 'stock_minimo_alerta' => 5]);
     Producto::factory()->create(['stock_actual' => 6, 'stock_minimo_alerta' => 5]);
     $actual = Venta::factory()->create(['fecha_hora' => '2026-09-01 00:00:00', 'total_venta' => '30.00', 'metodo_pago' => 'Yape']);
     DetalleVenta::factory()->for($actual, 'venta')->for($producto, 'producto')->create(['cantidad' => 3]);
@@ -1114,7 +1322,12 @@ test('dashboard totals distinguish current previous and future months and per-pr
     expect($response->json('resumen'))->toEqual(['cantidad_ventas' => 1, 'ingresos' => 30, 'productos_vendidos' => 3]);
     expect($response->json('variacion.porcentaje'))->toEqual(50);
     expect($response->json('ranking.0.id'))->toBe($producto->getKey());
-    expect($response->json('cantidad_stock_bajo'))->toBe(1);
+    expect($response->json('cantidad_stock_bajo'))->toBe(2);
+    expect($response->json('stock_bajo.0'))->toMatchArray([
+        'id' => $agotado->getKey(),
+        'nombre' => $agotado->nombre_producto,
+        'stock' => 0,
+    ]);
     expect($response->json('metodos.0.porcentaje'))->toEqual(100);
     expect(collect($response->json('meses'))->pluck('mes')->all())->toHaveCount(12);
     expect(collect($response->json('meses'))->pluck('mes')->last())->toBe('2026-09');
@@ -1136,6 +1349,7 @@ test('dashboard has no HTML tables and limits the product chart to five items', 
         ->assertSee('Top 5 Productos Más Vendidos')
         ->assertSee('dashboard-skeleton', false)
         ->assertSee('data-dashboard-endpoint', false)
+        ->assertSee('stock-alert-list', false)
         ->assertDontSee('data-live-lists', false);
 
     $this->getJson(route('dashboard.data'))->assertOk()->assertJsonCount(5, 'ranking');

@@ -14,22 +14,8 @@
     </span>
 </div>
 
-<div id="sales-history-hub" class="module-hub">
-    <button type="button" class="hub-hero hub-hero-blue" data-show-sales-history aria-label="Ver historial de ventas">
-        <span class="hub-hero-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></span>
-        <span class="hub-hero-text">
-            <strong>Ver historial de ventas</strong>
-            <span>{{ $ventas->total() }} {{ Str::plural('venta', $ventas->total()) }} registradas</span>
-        </span>
-        <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
-    </button>
-</div>
-
-<div id="sales-history-view" class="d-none">
+<div id="sales-history-view">
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <button type="button" class="view-back-btn" data-hide-sales-history>
-            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
-        </button>
         <h2 class="h5 mb-0 me-auto">Historial de ventas</h2>
     </div>
 
@@ -73,7 +59,7 @@
             <thead class="data-table-head">
                 <tr>
                     <th>N.º</th><th>Fecha</th><th>Cliente</th><th>Método de pago</th>
-                    <th>Descuento (%)</th><th>Descuento</th><th>IGV</th><th>Total</th>
+                    <th>Descuento (%)</th><th>Descuento</th><th>Subtotal (sin IGV)</th><th>IGV</th><th>Total</th>
                     <th class="text-end">Acción</th>
                 </tr>
             </thead>
@@ -82,7 +68,7 @@
                     <tr
                         data-search-row
                         data-search-date="{{ $venta->fechaHoraEnPeru()->format('Y-m-d') }}"
-                        data-search-value="{{ $venta->id_venta }} {{ $venta->fechaHoraEnPeru()->format('d/m/Y H:i') }} {{ $venta->cliente_nombre ?? 'cliente general' }} {{ $venta->cliente_documento }} {{ $venta->metodo_pago }} {{ $venta->igv_monto }} {{ $venta->descuento_porcentaje }} {{ $venta->descuento_monto }} {{ $venta->total_venta }}"
+                        data-search-value="{{ $venta->id_venta }} {{ $venta->fechaHoraEnPeru()->format('d/m/Y H:i') }} {{ $venta->cliente_nombre ?? 'cliente general' }} {{ $venta->cliente_documento }} {{ $venta->metodo_pago }} {{ $venta->subtotalNeto() }} {{ $venta->igv_monto }} {{ $venta->descuento_porcentaje }} {{ $venta->descuento_monto }} {{ $venta->total_venta }}"
                         data-suggestion-label="#{{ $venta->id_venta }} · {{ $venta->cliente_nombre ?? 'Cliente general' }} · {{ $venta->metodo_pago }}"
                     >
                         <td class="data-table-secondary">#{{ $venta->id_venta }}</td>
@@ -91,6 +77,7 @@
                         <td><span class="data-badge data-badge-neutral">{{ $venta->metodo_pago }}</span></td>
                         <td class="data-table-number">{{ $venta->descuento_porcentaje !== null ? number_format((float) $venta->descuento_porcentaje, 2).' %' : 'No registrado' }}</td>
                         <td class="data-table-number">{{ $venta->descuento_monto !== null ? 'S/ '.number_format((float) $venta->descuento_monto, 2) : 'No registrado' }}</td>
+                        <td class="data-table-number">{{ $venta->subtotalNeto() !== null ? 'S/ '.number_format((float) $venta->subtotalNeto(), 2) : 'No registrado' }}</td>
                         <td class="data-table-number">{{ $venta->igv_monto !== null ? 'S/ '.number_format((float) $venta->igv_monto, 2) : 'No registrado' }}</td>
                         <td class="data-table-number">S/ {{ number_format((float) $venta->total_venta, 2) }}</td>
                         <td>
@@ -103,7 +90,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="table-empty-cell">
+                        <td colspan="10" class="table-empty-cell">
                             @include('components.empty-state', [
                                 'title'       => 'Todavía no hay ventas',
                                 'description' => 'Inicia una venta para que aparezca en este historial.',
@@ -112,7 +99,7 @@
                     </tr>
                 @endforelse
                 <tr data-search-empty hidden>
-                    <td colspan="9" class="text-center text-muted py-4">No encontramos ventas que coincidan.</td>
+                    <td colspan="10" class="text-center text-muted py-4">No encontramos ventas que coincidan.</td>
                 </tr>
             </tbody>
         </table>
@@ -127,47 +114,3 @@
 </div>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-(function () {
-    var sessionKey = 'ventas-history-view';
-    var historyHub = document.getElementById('sales-history-hub');
-    var historyView = document.getElementById('sales-history-view');
-
-    function showHistory() {
-        historyHub.classList.add('d-none');
-        historyView.classList.remove('d-none');
-        try { sessionStorage.setItem(sessionKey, 'visible'); } catch (_) {}
-    }
-
-    function hideHistory() {
-        historyView.classList.add('d-none');
-        historyHub.classList.remove('d-none');
-        try { sessionStorage.removeItem(sessionKey); } catch (_) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    document.addEventListener('click', function (event) {
-        if (event.target.closest('[data-show-sales-history]')) {
-            showHistory();
-        }
-
-        if (event.target.closest('[data-hide-sales-history]')) {
-            hideHistory();
-        }
-    });
-
-    var params = new URLSearchParams(window.location.search);
-    try {
-        if (sessionStorage.getItem(sessionKey) === 'visible' || params.has('fecha_desde') || params.has('fecha_hasta') || params.has('page')) {
-            showHistory();
-        }
-    } catch (_) {
-        if (params.has('fecha_desde') || params.has('fecha_hasta') || params.has('page')) {
-            showHistory();
-        }
-    }
-}());
-</script>
-@endpush

@@ -589,7 +589,7 @@
             {{-- Totals --}}
             <div class="pos-cart-summary">
                 <div class="pos-summary-row">
-                    <span>Subtotal</span>
+                    <span>Subtotal (sin IGV)</span>
                     <strong id="pos-subtotal">S/ 0.00</strong>
                 </div>
                 <div class="pos-summary-row">
@@ -663,7 +663,7 @@
                             >
                             <span class="input-group-text">%</span>
                         </div>
-                        <div class="form-text">De 0 a 100; se aplica sobre el subtotal.</div>
+                        <div class="form-text">De 0 a 100; se aplica al total de productos con IGV incluido.</div>
                     </div>
                 </div>
 

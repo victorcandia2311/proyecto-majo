@@ -53,6 +53,18 @@ class Venta extends Model
         return $this->fecha_hora->copy()->setTimezone('America/Lima');
     }
 
+    public function subtotalNeto(): ?string
+    {
+        if ($this->igv_monto === null) {
+            return null;
+        }
+
+        $totalCents = $this->amountToCents((string) $this->total_venta);
+        $igvCents = $this->amountToCents((string) $this->igv_monto);
+
+        return number_format(($totalCents - $igvCents) / 100, 2, '.', '');
+    }
+
     public function detalles(): HasMany
     {
         return $this->hasMany(DetalleVenta::class, 'id_venta', 'id_venta');
@@ -62,5 +74,12 @@ class Venta extends Model
     {
         return $this->belongsToMany(Producto::class, 'detalle_venta', 'id_venta', 'id_producto', 'id_venta', 'id_producto')
             ->withPivot('id_detalle', 'cantidad', 'precio_unitario');
+    }
+
+    private function amountToCents(string $amount): int
+    {
+        [$whole, $fraction] = array_pad(explode('.', $amount, 2), 2, '0');
+
+        return ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
     }
 }

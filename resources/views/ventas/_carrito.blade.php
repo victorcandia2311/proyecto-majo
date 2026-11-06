@@ -106,11 +106,11 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        <div id="descuento-ayuda" class="form-text">De 0 a 100; se aplica sobre el subtotal.</div>
+                        <div id="descuento-ayuda" class="form-text">De 0 a 100; se aplica al total de productos con IGV incluido.</div>
                     </div>
                 </div>
                 <div class="border-top pt-3 mb-4" data-sale-summary data-subtotal="{{ number_format($totalCarrito, 2, '.', '') }}">
-                    <div class="d-flex justify-content-between mb-2"><span>Subtotal (IGV incluido)</span><strong id="sale-summary-subtotal">S/ {{ number_format($totalCarrito, 2) }}</strong></div>
+                    <div class="d-flex justify-content-between mb-2"><span>Subtotal (sin IGV)</span><strong id="sale-summary-subtotal">S/ 0.00</strong></div>
                     <div class="d-flex justify-content-between mb-2"><span>IGV (18 %)</span><strong id="sale-summary-igv">S/ 0.00</strong></div>
                     <div class="d-flex justify-content-between mb-2">
                         <span>Descuento (<span id="sale-summary-discount-percentage">0.00</span> %)</span>
@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!valid) {
             document.getElementById('sale-summary-discount-percentage').textContent = '—';
+            document.getElementById('sale-summary-subtotal').textContent = '—';
             document.getElementById('sale-summary-igv').textContent = '—';
             document.getElementById('sale-summary-discount-amount').textContent = '—';
             document.getElementById('sale-summary-total').textContent = '—';
@@ -171,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             (percentageBasisPoints / 100).toFixed(2);
 
         document.getElementById('sale-summary-subtotal').textContent =
-            formatCurrency(subtotalCents);
+            formatCurrency(taxableBaseCents);
 
         document.getElementById('sale-summary-igv').textContent =
             formatCurrency(igvCents);

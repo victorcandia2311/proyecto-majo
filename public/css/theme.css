@@ -219,6 +219,26 @@
     border-color: var(--theme-border);
 }
 
+[data-bs-theme="dark"] .stock-followup {
+    box-shadow: 0 5px 20px rgb(0 0 0 / 16%);
+}
+
+[data-bs-theme="dark"] .stock-followup-heading > a:hover {
+    border-color: #373f75;
+    background: #252b52;
+    color: #c7d2fe;
+}
+
+[data-bs-theme="dark"] .stock-alert-list a:hover,
+[data-bs-theme="dark"] .stock-alert-list a:focus-visible {
+    border-color: #4f46e5;
+}
+
+[data-bs-theme="dark"] .stock-alert-icon {
+    background: #49351a;
+    color: #fdba74;
+}
+
 [data-bs-theme="dark"] .sales-filter-total {
     border-color: #373f75;
     background-color: #252b52;

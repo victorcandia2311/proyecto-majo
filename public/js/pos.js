@@ -100,7 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('pos-item-count').textContent = itemCount;
         document.getElementById('pos-mobile-count').textContent = itemCount;
-        document.getElementById('pos-subtotal').textContent = currency.format(subtotalCents / 100);
+        document.getElementById('pos-subtotal').textContent = discountValid
+            ? currency.format(taxableBaseCents / 100)
+            : '—';
         document.getElementById('pos-igv').textContent = discountValid ? currency.format(igvCents / 100) : '—';
         document.getElementById('pos-discount-percentage-value').textContent = discountValid ? (discountBasisPoints / 100).toFixed(2) : '—';
         document.getElementById('pos-discount-amount').textContent =discountValid ? currency.format(discountCents / 100) : '—';

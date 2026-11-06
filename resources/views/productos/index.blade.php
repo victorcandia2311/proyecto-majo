@@ -2,7 +2,7 @@
 
 @section('title', 'Productos')
 
-{{-- Styles come from theme.css (hub-hero, hub-card, view-back-btn) --}}
+{{-- Styles come from theme.css (hub-card, view-back-btn) --}}
 
 @section('content')
 
@@ -18,69 +18,26 @@
     </span>
 </div>
 
-{{-- ══════════════════════════════════════════════════════════════════
-     VISTA A: MODULE HUB (visible por defecto)
-     ══════════════════════════════════════════════════════════════════ --}}
-<div id="view-hub" class="module-hub">
-
-    <button type="button" class="hub-hero hub-hero-blue" data-show-view="view-table" aria-label="Ver lista de productos">
-        <span class="hub-hero-icon"><i class="bi bi-table" aria-hidden="true"></i></span>
-        <span class="hub-hero-text">
-            <strong>Ver lista de productos</strong>
-            <span>Consulta, filtra y gestiona el catálogo completo</span>
+@php $stockBajo = $productos->filter(fn($p) => $p->stock_actual <= $p->stock_minimo_alerta)->count(); @endphp
+@if ($stockBajo > 0)
+    <div class="alert alert-danger d-flex align-items-center gap-2 rounded-3 mb-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
+        <span>
+            <strong>{{ $stockBajo }} {{ Str::plural('producto', $stockBajo) }}</strong> con stock bajo.
+            Revisa la lista de productos.
         </span>
-        <i class="bi bi-arrow-right-circle ms-auto fs-4 opacity-75" aria-hidden="true"></i>
-    </button>
-
-    <div class="hub-cards">
-        <button
-            type="button"
-            class="hub-card"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#product-create-panel"
-            aria-controls="product-create-panel"
-        >
-            <span class="hub-card-icon bg-primary bg-opacity-10 text-primary">
-                <i class="bi bi-plus-circle" aria-hidden="true"></i>
-            </span>
-            <span class="hub-card-text">
-                <strong>Nuevo producto</strong>
-                <span>Registrar en catálogo</span>
-            </span>
-        </button>
-
-
     </div>
+@endif
 
-    @php $stockBajo = $productos->filter(fn($p) => $p->stock_actual <= $p->stock_minimo_alerta)->count(); @endphp
-    @if ($stockBajo > 0)
-        <div class="alert alert-danger d-flex align-items-center gap-2 rounded-3 mb-0" role="alert">
-            <i class="bi bi-exclamation-triangle-fill fs-5" aria-hidden="true"></i>
-            <span>
-                <strong>{{ $stockBajo }} {{ Str::plural('producto', $stockBajo) }}</strong> con stock bajo.
-                <button type="button" class="alert-link btn btn-link p-0 align-baseline" data-show-view="view-table">Ver lista →</button>
-            </span>
-        </div>
-    @endif
-
-</div>{{-- /view-hub --}}
-
-{{-- ══════════════════════════════════════════════════════════════════
-     VISTA B: TABLA DE PRODUCTOS (oculta por defecto)
-     ══════════════════════════════════════════════════════════════════ --}}
-<div id="view-table" class="d-none">
+<div id="view-table">
 
     <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-        <button type="button" class="view-back-btn" data-show-view="view-hub">
-            <i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al menú
-        </button>
         <h2 class="h5 mb-0 me-auto">Lista de productos</h2>
         <button
             type="button"
             class="btn btn-primary btn-sm"
-            data-bs-toggle="offcanvas"
-            data-bs-target="#product-create-panel"
-            aria-controls="product-create-panel"
+            data-bs-toggle="modal"
+            data-bs-target="#product-create-modal"
         >
             <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nuevo producto
         </button>
@@ -120,14 +77,16 @@
                     @forelse ($productos as $producto)
                         <tr
                             data-search-row
-                            data-search-value="{{ $producto->id_producto }} {{ $producto->nombre_producto }} {{ $producto->stock_actual }} {{ $producto->stock_minimo_alerta }} {{ $producto->precio_venta }} {{ $producto->stock_actual <= $producto->stock_minimo_alerta ? 'stock bajo' : 'disponible' }}"
+                            data-search-value="{{ $producto->id_producto }} {{ $producto->nombre_producto }} {{ $producto->stock_actual }} {{ $producto->stock_minimo_alerta }} {{ $producto->precio_venta }} {{ $producto->stock_actual === 0 ? 'no disponible' : ($producto->stock_actual <= $producto->stock_minimo_alerta ? 'stock bajo' : 'disponible') }}"
                             data-suggestion-label="{{ $producto->nombre_producto }} · #{{ $producto->id_producto }}"
                         >
                             <td class="data-table-primary">{{ $producto->nombre_producto }}</td>
                             <td class="data-table-number">{{ $producto->stock_actual }}</td>
                             <td class="data-table-number">S/ {{ number_format((float) $producto->precio_venta, 2) }}</td>
                             <td>
-                                @if ($producto->stock_actual <= $producto->stock_minimo_alerta)
+                                @if ($producto->stock_actual === 0)
+                                    <span class="data-badge data-badge-danger"><i class="bi bi-x-circle" aria-hidden="true"></i>No disponible</span>
+                                @elseif ($producto->stock_actual <= $producto->stock_minimo_alerta)
                                     <span class="data-badge data-badge-danger"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>Stock bajo</span>
                                 @else
                                     <span class="data-badge data-badge-success"><i class="bi bi-check-circle" aria-hidden="true"></i>Disponible</span>
@@ -138,9 +97,9 @@
                                     <button type="button" class="btn-icon btn-light" data-bs-toggle="modal" data-bs-target="#product-inspect-{{ $producto->id_producto }}" aria-label="Inspeccionar {{ $producto->nombre_producto }}" title="Inspeccionar">
                                         <i class="bi bi-eye" aria-hidden="true"></i>
                                     </button>
-                                    <a href="{{ route('productos.edit', $producto) }}" class="btn-icon btn-icon-primary" aria-label="Editar {{ $producto->nombre_producto }}" title="Editar">
+                                    <button type="button" class="btn-icon btn-icon-primary" data-bs-toggle="modal" data-bs-target="#product-edit-modal-{{ $producto->id_producto }}" aria-label="Editar {{ $producto->nombre_producto }}" title="Editar">
                                         <i class="bi bi-pencil" aria-hidden="true"></i>
-                                    </a>
+                                    </button>
                                     <form method="POST" action="{{ route('productos.destroy', $producto) }}" data-confirm="¿Deseas eliminar este producto?">
                                         @csrf
                                         @method('DELETE')
@@ -157,10 +116,10 @@
                                 @include('components.empty-state', [
                                     'title'            => 'Tu catálogo está vacío',
                                     'description'      => 'Registra el primer producto para empezar a controlar existencias y ventas.',
-                                    'actionUrl'        => '#product-create-panel',
+                                    'actionUrl'        => '#product-create-modal',
                                     'actionLabel'      => 'Registrar producto',
-                                    'actionTarget'     => 'product-create-panel',
-                                    'actionTargetType' => 'offcanvas',
+                                    'actionTarget'     => 'product-create-modal',
+                                    'actionTargetType' => 'modal',
                                 ])
                             </td>
                         </tr>
@@ -220,7 +179,9 @@
                                     </div>
                                 </div>
                                 <div class="col-12">
-                                    @if ($producto->stock_actual <= $producto->stock_minimo_alerta)
+                                    @if ($producto->stock_actual === 0)
+                                        <span class="data-badge data-badge-danger"><i class="bi bi-x-circle" aria-hidden="true"></i>No disponible</span>
+                                    @elseif ($producto->stock_actual <= $producto->stock_minimo_alerta)
                                         <span class="data-badge data-badge-danger"><i class="bi bi-exclamation-circle" aria-hidden="true"></i>Stock bajo</span>
                                     @else
                                         <span class="data-badge data-badge-success"><i class="bi bi-check-circle" aria-hidden="true"></i>Disponible</span>
@@ -235,58 +196,71 @@
     </div>
 @endforeach
 
-{{-- ── Offcanvas: Nuevo producto ─────────────────────────────────────── --}}
-<div class="offcanvas offcanvas-end" tabindex="-1" id="product-create-panel" aria-labelledby="product-create-title">
-    <div class="offcanvas-header border-bottom">
-        <div>
-            <p class="dashboard-panel-kicker mb-1">CATÁLOGO</p>
-            <h2 class="offcanvas-title h5 fw-bold" id="product-create-title">Nuevo producto</h2>
+@foreach ($productos as $producto)
+    <div class="modal fade admin-form-modal" id="product-edit-modal-{{ $producto->id_producto }}" tabindex="-1" aria-labelledby="product-edit-title-{{ $producto->id_producto }}" aria-hidden="true" @if ($errors->any() && old('_form') === 'product-edit-'.$producto->id_producto) data-auto-open @endif>
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <p class="dashboard-panel-kicker mb-1">CATÁLOGO</p>
+                        <h2 class="modal-title h5 fw-bold" id="product-edit-title-{{ $producto->id_producto }}">Editar producto</h2>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ route('productos.update', $producto) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="_form" value="product-edit-{{ $producto->id_producto }}">
+                        @include('productos._form', [
+                            'producto' => $producto,
+                            'formInModal' => true,
+                            'formKey' => 'product-edit-'.$producto->id_producto,
+                            'formIdPrefix' => 'product-edit-'.$producto->id_producto.'-',
+                        ])
+                    </form>
+                </div>
+            </div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
     </div>
-    <div class="offcanvas-body">
-        <form action="{{ route('productos.store') }}" method="POST" enctype="multipart/form-data">
-            @csrf
-            <input type="hidden" name="_form" value="product-create">
-            @include('productos._form', ['producto' => null])
-        </form>
+@endforeach
+
+<div class="modal fade admin-form-modal" id="product-create-modal" tabindex="-1" aria-labelledby="product-create-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <p class="dashboard-panel-kicker mb-1">CATÁLOGO</p>
+                    <h2 class="modal-title h5 fw-bold" id="product-create-title">Nuevo producto</h2>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ route('productos.store') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" name="_form" value="product-create">
+                    @include('productos._form', [
+                        'producto' => null,
+                        'formInModal' => true,
+                        'formKey' => 'product-create',
+                        'formIdPrefix' => 'product-create-',
+                    ])
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 
 @endsection
 
 @push('scripts')
-@if ($errors->any() && old('_form') === 'product-create')
+@if ($errors->any() && (old('_form') === 'product-create' || str_starts_with((string) old('_form'), 'product-edit-')))
     <script>
-        document.addEventListener('DOMContentLoaded', () =>
-            window.appFeedbackReady.then(() =>
-                bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('product-create-panel')).show()
-            )
-        );
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.querySelector('[data-auto-open]') || document.getElementById('product-create-modal');
+            window.appFeedbackReady.then(() => bootstrap.Modal.getOrCreateInstance(modal).show());
+        });
     </script>
 @endif
 
-<script>
-(function () {
-    var VIEWS = ['view-hub', 'view-table'];
-    var SESSION_KEY = 'productos-view';
-
-    function showView(targetId) {
-        VIEWS.forEach(function (id) {
-            document.getElementById(id).classList.toggle('d-none', id !== targetId);
-        });
-        try { sessionStorage.setItem(SESSION_KEY, targetId); } catch (_) {}
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    document.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-show-view]');
-        if (btn) showView(btn.dataset.showView);
-    });
-
-    // Restore last view after a form submit / page reload
-    var stored = (function () { try { return sessionStorage.getItem(SESSION_KEY); } catch (_) { return null; } }());
-    if (stored && stored !== 'view-hub') showView(stored);
-}());
-</script>
 @endpush

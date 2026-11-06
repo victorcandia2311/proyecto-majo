@@ -24,7 +24,12 @@
             <label for="precio-compra" class="form-label">Precio (S/)</label>
             <input id="precio-compra" type="number" name="precio_compra" value="{{ old('_form') === 'precio-nuevo' ? old('precio_compra') : '' }}" class="form-control" min="0" max="99999999.99" step="0.01" required>
         </div>
-        <button class="btn btn-primary rounded-3 px-4 py-2 w-100" type="submit" @disabled($productos->isEmpty() || $proveedores->isEmpty())>Guardar precio</button>
+        <div class="d-flex justify-content-end gap-2">
+            @if ($formInModal ?? false)
+                <button class="btn btn-light" type="button" data-bs-dismiss="modal">Cancelar</button>
+            @endif
+            <button class="btn btn-primary rounded-3 px-4 py-2 {{ ($formInModal ?? false) ? '' : 'w-100' }}" type="submit" @disabled($productos->isEmpty() || $proveedores->isEmpty())>Guardar precio</button>
+        </div>
     </div>
     @if ($productos->isEmpty() || $proveedores->isEmpty())
         <p class="text-muted mt-3 mb-0">Registra al menos un <a href="{{ route('productos.create') }}">producto</a> y un <a href="{{ route('proveedores.index') }}">proveedor</a> para asignar precios.</p>

@@ -42,6 +42,8 @@ Route::middleware(['auth', 'auth.session', 'role:admin,empleado'])->group(functi
         Route::prefix('proveedores')->name('proveedores.')->controller(ProveedorController::class)->group(function (): void {
             Route::get('asignar-producto', 'asignarProducto')->name('asignar-producto');
             Route::post('precios', 'guardarPrecio')->name('precios.store');
+            Route::get('{proveedor}/productos', 'productos')->name('productos');
+            Route::post('{proveedor}/productos', 'guardarPrecioProveedor')->name('productos.store');
             Route::put('{proveedor}/productos/{producto}', 'actualizarPrecio')->name('precios.update');
             Route::delete('{proveedor}/productos/{producto}', 'eliminarPrecio')->name('precios.destroy');
         });

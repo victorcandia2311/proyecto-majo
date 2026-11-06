@@ -20,11 +20,15 @@ class AsistenciaController extends Controller
     {
         $filters = $request->validate([
             'fecha' => ['nullable', 'date_format:Y-m-d'],
+            'fecha_asistencias' => ['nullable', 'date_format:Y-m-d'],
+            'vista' => ['nullable', Rule::in(['tabla-staff', 'tabla-temporales'])],
         ]);
         $fechaTemporales = $filters['fecha'] ?? now()->toDateString();
+        $fechaAsistencias = $filters['fecha_asistencias'] ?? now()->toDateString();
+        $vistaActiva = $filters['vista'] ?? 'menu-hub';
         $empleados = Empleado::orderBy('nombres')->get();
         $asistencias = Asistencia::with('empleado')
-            ->whereDate('fecha', now()->toDateString())
+            ->whereDate('fecha', $fechaAsistencias)
             ->orderByDesc('hora_ingreso')
             ->paginate(10, ['*'], 'staff_page')->withQueryString();
         $empleadosTemporales = EmpleadoTemporal::with('empleado')->orderByDesc('id_temporal')->get();
@@ -39,6 +43,8 @@ class AsistenciaController extends Controller
             'empleadosTemporales',
             'asistenciasTemporales',
             'fechaTemporales',
+            'fechaAsistencias',
+            'vistaActiva',
         ));
     }
 

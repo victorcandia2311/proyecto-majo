@@ -360,10 +360,10 @@
 
     {{-- RESUMEN DE LA VENTA --}}
     <table class="resumen">
-        @if ($venta->subtotal_venta !== null)
+        @if ($venta->subtotalNeto() !== null)
             <tr>
-                <td>Subtotal (IGV incluido)</td>
-                <td class="importe">S/ {{ number_format((float) $venta->subtotal_venta, 2) }}</td>
+                <td>Subtotal (sin IGV)</td>
+                <td class="importe">S/ {{ number_format((float) $venta->subtotalNeto(), 2) }}</td>
             </tr>
             <tr>
                 <td>Descuento aplicado ({{ number_format((float) $venta->descuento_porcentaje, 2) }} %)</td>
