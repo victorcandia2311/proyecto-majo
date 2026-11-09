@@ -213,10 +213,6 @@
                                 @include('components.empty-state', [
                                     'title'            => 'No hay registros de asistencia hoy',
                                     'description'      => 'Usa el botón de arriba para marcar el ingreso o la salida de un empleado.',
-                                    'actionLabel'      => 'Marcar Asistencia (Staff)',
-                                    'actionUrl'        => '#',
-                                    'actionTarget'     => 'modal-staff',
-                                    'actionTargetType' => 'modal',
                                 ])
                             </td>
                         </tr>
@@ -306,10 +302,6 @@
                                 @include('components.empty-state', [
                                     'title'            => 'No hay empleados temporales registrados',
                                     'description'      => 'Registra primero al empleado temporal para luego marcar su horario.',
-                                    'actionLabel'      => 'Nuevo Emp. Temporal',
-                                    'actionUrl'        => '#',
-                                    'actionTarget'     => 'modal-nuevo-temporal',
-                                    'actionTargetType' => 'modal',
                                 ])
                             </td>
                         </tr>

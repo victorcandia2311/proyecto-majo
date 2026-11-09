@@ -33,6 +33,9 @@
                     <input id="sales-date-to" name="fecha_hasta" value="{{ $fechaHasta }}" class="form-control form-control-sm" type="date" data-date-filter-end>
                 </div>
                 <button type="submit" class="btn btn-outline-primary btn-sm">Filtrar</button>
+                <button type="submit" formaction="{{ route('ventas.exportar') }}" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i>Exportar ventas
+                </button>
             </form>
             <div class="list-search-wrap" data-list-search>
                 <label class="visually-hidden" for="filter-sales">Buscar ventas</label>

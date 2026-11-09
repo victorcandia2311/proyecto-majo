@@ -70,6 +70,7 @@ Route::middleware(['auth', 'auth.session', 'role:admin,empleado'])->group(functi
 
     Route::prefix('ventas')->name('ventas.')->controller(VentaController::class)->group(function (): void {
         Route::get('/', 'index')->name('index');
+        Route::get('exportar', 'exportar')->name('exportar');
         Route::get('nueva', 'create')->name('nueva');
         Route::post('carrito', 'agregar')->name('carrito.agregar')->block();
         Route::delete('carrito', 'vaciar')->name('carrito.vaciar')->block();

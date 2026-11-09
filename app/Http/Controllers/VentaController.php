@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use App\Models\Venta;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,9 +30,7 @@ class VentaController extends Controller
         ]);
         $fechaDesde = $filtros['fecha_desde'] ?? null;
         $fechaHasta = $filtros['fecha_hasta'] ?? null;
-        $ventasQuery = Venta::query()
-            ->when($fechaDesde, fn ($query) => $query->whereDate('fecha_hora', '>=', $fechaDesde))
-            ->when($fechaHasta, fn ($query) => $query->whereDate('fecha_hora', '<=', $fechaHasta));
+        $ventasQuery = $this->queryVentasPorFecha($fechaDesde, $fechaHasta);
         $filtrandoPorFecha = $fechaDesde !== null || $fechaHasta !== null;
         $totalVentasFiltradas = $filtrandoPorFecha ? (clone $ventasQuery)->sum('total_venta') : null;
         $ventas = $ventasQuery->orderByDesc('fecha_hora')->paginate(10)->withQueryString();
@@ -47,6 +46,25 @@ class VentaController extends Controller
             'filtrandoPorFecha',
             'totalVentasFiltradas',
         ));
+    }
+
+    public function exportar(Request $request): Response
+    {
+        $filtros = $request->validate([
+            'fecha_desde' => ['nullable', 'date_format:Y-m-d'],
+            'fecha_hasta' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:fecha_desde'],
+        ]);
+        $fechaDesde = $filtros['fecha_desde'] ?? null;
+        $fechaHasta = $filtros['fecha_hasta'] ?? null;
+        $ventasQuery = $this->queryVentasPorFecha($fechaDesde, $fechaHasta);
+        $ventas = (clone $ventasQuery)->orderByDesc('fecha_hora')->get();
+        $totalVentas = (clone $ventasQuery)->sum('total_venta');
+        $pdf = Pdf::loadView('ventas.reporte', compact('ventas', 'fechaDesde', 'fechaHasta', 'totalVentas'))
+            ->setPaper('a4', 'landscape');
+        $periodoArchivo = implode('_a_', array_filter([$fechaDesde, $fechaHasta]));
+        $nombreArchivo = 'Ventas'.($periodoArchivo !== '' ? '_'.$periodoArchivo : '').'.pdf';
+
+        return $pdf->download($nombreArchivo);
     }
 
     public function create(): View
@@ -274,6 +292,14 @@ class VentaController extends Controller
 
             return $subtotalCentimos + (((int) $entero * 100) + (int) $decimal) * (int) $item['cantidad'];
         }, 0);
+    }
+
+    /** @return Builder<Venta> */
+    private function queryVentasPorFecha(?string $fechaDesde, ?string $fechaHasta): Builder
+    {
+        return Venta::query()
+            ->when($fechaDesde, fn (Builder $query) => $query->whereDate('fecha_hora', '>=', $fechaDesde))
+            ->when($fechaHasta, fn (Builder $query) => $query->whereDate('fecha_hora', '<=', $fechaHasta));
     }
 
     private function formatDecimal(int $valueInHundredths): string

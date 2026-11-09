@@ -157,6 +157,7 @@ test('employee sales routes separate the history from the point of sale', functi
         ->assertOk()
         ->assertViewIs('ventas.index')
         ->assertSee('Historial de ventas')
+        ->assertSee('Exportar ventas')
         ->assertSee('sales-history-view', false)
         ->assertSee('<span>Punto de Venta</span>', false)
         ->assertDontSee('<span>Dashboard</span>', false)
@@ -330,6 +331,12 @@ test('inventory opens on its hub and shows movement history only on request', fu
         ->assertDontSee('<th>Stock actual</th>', false);
 });
 
+test('administrator sales history offers the export action', function () {
+    $this->get(route('ventas.index'))
+        ->assertSee('Exportar ventas')
+        ->assertSee('formaction="'.route('ventas.exportar').'"', false);
+});
+
 test('sales history stays behind its view button until requested', function () {
     $this->get(route('ventas.index'))
         ->assertSee('Ver historial de ventas')
@@ -489,6 +496,83 @@ test('module tables paginate ten records and attendance honors the selected date
 test('sales history hides the period total when no date filter is selected', function () {
     $this->get(route('ventas.index'))->assertDontSee('Total de ventas del periodo seleccionado');
 });
+
+test('sales reports download a PDF for a single day or a date range', function (array $filtros, string $nombreArchivo) {
+    Venta::factory()->create([
+        'fecha_hora' => '2026-10-04 12:00:00',
+        'cliente_nombre' => 'Cliente incluido',
+        'total_venta' => '25.00',
+    ]);
+
+    $response = $this->get(route('ventas.exportar', $filtros))
+        ->assertOk()
+        ->assertHeader('Content-Type', 'application/pdf')
+        ->assertDownload($nombreArchivo);
+
+    expect($response->getContent())->toStartWith('%PDF-');
+})->with([
+    'one day' => [
+        ['fecha_desde' => '2026-10-04', 'fecha_hasta' => '2026-10-04'],
+        'Ventas_2026-10-04_a_2026-10-04.pdf',
+    ],
+    'multiple days' => [
+        ['fecha_desde' => '2026-10-01', 'fecha_hasta' => '2026-10-05'],
+        'Ventas_2026-10-01_a_2026-10-05.pdf',
+    ],
+]);
+
+test('sales reports include only sales from the selected date range', function () {
+    $saleAtStart = Venta::factory()->create([
+        'fecha_hora' => '2026-10-01 09:00:00',
+        'total_venta' => '25.00',
+    ]);
+    $saleAtEnd = Venta::factory()->create([
+        'fecha_hora' => '2026-10-05 18:00:00',
+        'total_venta' => '30.00',
+    ]);
+    Venta::factory()->create([
+        'fecha_hora' => '2026-10-06 12:00:00',
+        'total_venta' => '500.00',
+    ]);
+
+    $pdf = Mockery::mock(Barryvdh\DomPDF\PDF::class);
+    $pdf->shouldReceive('setPaper')->once()->with('a4', 'landscape')->andReturnSelf();
+    $pdf->shouldReceive('download')->once()->with('Ventas_2026-10-01_a_2026-10-05.pdf')
+        ->andReturn(response('PDF', 200));
+    Pdf::shouldReceive('loadView')
+        ->once()
+        ->with('ventas.reporte', Mockery::on(fn (array $data): bool => $data['ventas']->modelKeys() === [
+            $saleAtEnd->getKey(),
+            $saleAtStart->getKey(),
+        ] && $data['fechaDesde'] === '2026-10-01'
+            && $data['fechaHasta'] === '2026-10-05'
+            && (float) $data['totalVentas'] === 55.0))
+        ->andReturn($pdf);
+
+    $this->get(route('ventas.exportar', [
+        'fecha_desde' => '2026-10-01',
+        'fecha_hasta' => '2026-10-05',
+    ]))->assertOk();
+});
+
+test('sales report rejects a range whose end date is earlier than its start date', function () {
+    $this->get(route('ventas.exportar', [
+        'fecha_desde' => '2026-10-05',
+        'fecha_hasta' => '2026-10-01',
+    ]))->assertSessionHasErrors('fecha_hasta');
+});
+
+test('administrators and sellers can download sales reports', function (string $role) {
+    $this->actingAs(Empleado::factory()->withAccess($role)->make(['id_empleado' => 42]));
+
+    $this->get(route('ventas.exportar', [
+        'fecha_desde' => '2026-10-04',
+        'fecha_hasta' => '2026-10-04',
+    ]))->assertOk()->assertDownload('Ventas_2026-10-04_a_2026-10-04.pdf');
+})->with([
+    'administrator' => 'admin',
+    'seller' => 'empleado',
+]);
 
 test('sales date filters reject an end date earlier than the start date', function () {
     $this->get(route('ventas.index', [

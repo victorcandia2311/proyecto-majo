@@ -172,9 +172,15 @@ class AuthController extends Controller
     private function authenticatedRedirect(Request $request): RedirectResponse
     {
         $request->session()->regenerate();
-        $request->session()->forget(['carrito', 'url.intended', 'recovery_email', 'recovery_username', ...$this->registrationCodeSessionKeys()]);
+        $request->session()->forget([ 'carrito', 'url.intended', 'recovery_email', 'recovery_username', ...$this->registrationCodeSessionKeys()]);
 
-        return to_route($request->user()->homeRoute());
+        $usuario = $request->user();
+
+        if ($usuario->isAdmin()) {
+            return to_route($usuario->homeRoute());
+        }
+
+        return to_route('ventas.nueva');
     }
 
     public function destroy(Request $request): RedirectResponse
