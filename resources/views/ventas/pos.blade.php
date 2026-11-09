@@ -721,6 +721,55 @@
     </div>
 </div>
 
+
+{{-- ── Invoice Preview Modal ───────────────────────────────────── --}}
+<div class="modal fade" id="pos-invoice-modal" tabindex="-1"
+     aria-labelledby="pos-invoice-title" aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 shadow">
+
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold" id="pos-invoice-title">
+                        <i class="bi bi-file-earmark-pdf text-danger me-2"></i>
+                        Vista previa de factura
+                    </h5>
+                    <small class="text-muted">
+                        Venta registrada correctamente
+                    </small>
+                </div>
+
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-2">
+                <iframe
+                    id="pos-invoice-frame"
+                    src="about:blank"
+                    title="Vista previa de factura"
+                    style="display:block; width:100%; height:75vh; border:0;"
+                ></iframe>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light rounded-pill px-4"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+
+                <button type="button" class="btn btn-primary rounded-pill px-4"
+                        id="pos-invoice-print">
+                    <i class="bi bi-printer me-2"></i>
+                    Imprimir factura
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
 {{-- ── Catalog data (JSON for pos.js) ──────────────────────────────── --}}
 <script id="pos-catalog-data" type="application/json">{!! \Illuminate\Support\Js::encode($productos->map(fn ($producto): array => [
     'id'          => $producto->getKey(),

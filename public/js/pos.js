@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const productModalElement = document.getElementById('pos-product-modal');
     const productModal = bootstrap.Modal.getOrCreateInstance(productModalElement);
     const detailQuantity = document.getElementById('pos-detail-quantity');
+    const invoiceModalElement = document.getElementById('pos-invoice-modal');
+    const invoiceFrame = document.getElementById('pos-invoice-frame');
+    const invoicePrintButton = document.getElementById('pos-invoice-print');
+
+    const invoiceModal = bootstrap.Modal.getOrCreateInstance(invoiceModalElement);
     let activeProduct = null;
 
     const showStatus = (message) => {
@@ -237,69 +242,108 @@ document.addEventListener('DOMContentLoaded', () => {
 
     discountInput.addEventListener('input', renderCart);
 
+    
     checkoutForm.addEventListener('submit', async (event) => {
         event.preventDefault();
+
         if (cart.size === 0) {
             showStatus('Agrega al menos un producto antes de confirmar.');
             return;
         }
 
         const button = document.getElementById('pos-checkout-button');
-        button.disabled = true;
+
         button.disabled = true;
         button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Procesando venta…';
 
         try {
-            const response = await fetch(page.dataset.posCheckoutUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                },
-                body: JSON.stringify({
-                    cliente_nombre: document.getElementById('pos-client-name').value || null,
-                    cliente_documento: document.getElementById('pos-client-document').value || null,
-                    metodo_pago: document.getElementById('pos-payment-method').value,
-                    descuento_porcentaje: discountInput.value,
-                    items: [...cart.entries()].map(([id_producto, item]) => ({ id_producto, cantidad: item.quantity })),
-                }),
-            });
-            const result = await response.json();
-
-            if (!response.ok) {
-                const message = Object.values(result.errors ?? {}).flat()[0] ?? result.message ?? 'No se pudo completar la venta.';
-                showStatus(message);
-                return;
-            }
-
-            cart.forEach((item, productId) => {
-                const product = products.get(productId);
-                if (product) product.stock -= item.quantity;
-            });
-            cart.clear();
-            checkoutForm.reset();
-            renderCart();
-            Swal.fire({
-                icon: 'success',
-                title: '¡Venta registrada!',
-                text: `Venta #${result.venta_id} · Total ${currency.format(Number(result.total_venta))}`,
-                showCancelButton: true,
-                confirmButtonText: 'Descargar recibo',
-                cancelButtonText: 'Continuar',
-                reverseButtons: true,
-            }).then(({ isConfirmed }) => {
-                if (isConfirmed) {
-                    window.location.assign(result.recibo_url);
-                }
-            });
-        } catch (error) {
-            showStatus(error instanceof Error ? `No se pudo conectar con el servidor: ${error.message}` : 'No se pudo conectar con el servidor.');
-        } finally {
-            button.innerHTML = '<i class="bi bi-lock-fill me-2" aria-hidden="true"></i>Confirmar venta';
-            button.disabled = cart.size === 0;
+        const response = await fetch(page.dataset.posCheckoutUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            },
+            body: JSON.stringify({
+                cliente_nombre: document.getElementById('pos-client-name').value || null,
+                cliente_documento: document.getElementById('pos-client-document').value || null,
+                metodo_pago: document.getElementById('pos-payment-method').value,
+                descuento_porcentaje: discountInput.value,
+                items: [...cart.entries()].map(([id_producto, item]) => ({
+                    id_producto,
+                    cantidad: item.quantity
+                })),
+            }),
+        });
+    
+        const result = await response.json();
+    
+        if (!response.ok) {
+            const message = Object.values(result.errors ?? {}).flat()[0]
+                ?? result.message
+                ?? 'No se pudo completar la venta.';
+        
+            showStatus(message);
+            return;
         }
+    
+        // Actualizar el stock local después de confirmar la venta.
+        cart.forEach((item, productId) => {
+            const product = products.get(productId);
+            if (product) product.stock -= item.quantity;
+        });
+    
+        // Limpiar el carrito y el formulario.
+        cart.clear();
+        checkoutForm.reset();
+        renderCart();
+    
+        // Preparar la URL de la factura.
+        const previewUrl = new URL(result.recibo_url, window.location.origin);
+        previewUrl.searchParams.set('inline', '1');
+    
+        // Mostrar la factura dentro del modal.
+        invoiceFrame.src = previewUrl.toString();
+        invoiceModal.show();
+    
+        // Notificación de venta exitosa.
+        Swal.fire({
+            icon: 'success',
+            title: '¡Venta registrada!',
+            text: `Venta #${result.venta_id} · Total ${currency.format(Number(result.total_venta))}`,
+            timer: 1800,
+            showConfirmButton: false,
+            toast: true,
+            position: 'top-end',
+        });
+    
+    } catch (error) {
+        showStatus(
+            error instanceof Error
+                ? `No se pudo conectar con el servidor: ${error.message}`
+                : 'No se pudo conectar con el servidor.'
+        );
+    
+    } finally {
+        button.innerHTML = '<i class="bi bi-lock-fill me-2" aria-hidden="true"></i>Confirmar venta';
+        button.disabled = cart.size === 0;
+    }
+    });
+    
+    // Imprimir factura desde el modal.
+    invoicePrintButton.addEventListener('click', () => {
+        try {
+            invoiceFrame.contentWindow.focus();
+            invoiceFrame.contentWindow.print();
+        } catch (error) {
+            showStatus('No se pudo abrir la impresión. Utiliza el botón de imprimir del visor PDF.');
+        }
+    });
+
+    // Limpiar el visor al cerrar la vista previa.
+    invoiceModalElement.addEventListener('hidden.bs.modal', () => {
+        invoiceFrame.src = 'about:blank';
     });
 
     renderCart();

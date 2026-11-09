@@ -67,7 +67,7 @@
      ═══════════════════════════════════════════════════════════════════════════ --}}
 <div id="menu-hub">
 
-    <div class="row row-cols-1 row-cols-md-3 g-4 mb-2">
+    <div class="row row-cols-1 row-cols-md-2 g-4 mb-2">
 
         {{-- Botón 1: Ver asistencias de hoy --}}
         <div class="col">
@@ -83,23 +83,8 @@
             </button>
         </div>
 
-        {{-- Botón 2: Marcar ingreso/salida personal fijo --}}
-        <div class="col">
-            <button type="button" class="hub-card h-100 w-100"
-                    data-bs-toggle="modal" data-bs-target="#modal-staff"
-                    @class(['opacity-50' => $empleados->isEmpty()])>
-                <span class="hub-card-icon bg-primary bg-opacity-10 text-primary">
-                    <i class="bi bi-person-check" aria-hidden="true"></i>
-                </span>
-                <span class="hub-card-text">
-                    <strong>Marcar Ingreso / Salida</strong>
-                    <span>Personal Fijo</span>
-                </span>
-                <i class="bi bi-arrow-right ms-auto text-secondary" aria-hidden="true"></i>
-            </button>
-        </div>
 
-        {{-- Botón 3: Gestión de temporales (marcar + registrar) --}}
+        {{-- Botón 2: Gestión de temporales (marcar + registrar) --}}
         <div class="col">
             <button type="button" class="hub-card h-100 w-100" data-show-view="tabla-temporales">
                 <span class="hub-card-icon bg-warning bg-opacity-10 text-warning">
