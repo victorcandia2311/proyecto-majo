@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('nombres')->nullable();
             $table->boolean('es_eventual')->default(false);
             $table->string('documento_identidad', 20)->nullable();
+            $table->softDeletes();
             $table->timestamps();
         });
     }
