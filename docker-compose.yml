@@ -49,7 +49,7 @@ services:
       POSTGRES_USER: postgres       # Usuario (igual que tu .env local)
       POSTGRES_PASSWORD: postgres   # Contraseña (igual que tu .env local)
     ports:
-      - "5432:5432"                 # Puerto expuesto (por si necesitas conectarte desde fuera)
+      - "5433:5432"                 # Puerto expuesto (por si necesitas conectarte desde fuera)
     volumes:
       - pgdata:/var/lib/postgresql/data  # Volumen persistente para los datos
     networks:
