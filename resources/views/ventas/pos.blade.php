@@ -284,12 +284,15 @@
 
     /* ── Cart items list ──────────────────────────────────────────── */
     .pos-cart-items {
-        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Centra verticalmente los productos cuando hay pocos */
+        min-height: 145px;       /* Altura mínima suficiente al 100% de zoom sin provocar scroll */
+        max-height: 260px;       /* Solo muestra scroll si agregas muchos productos */
         overflow-y: auto;
+        padding: 0.5rem 0;
         margin: 0;
-        padding: 0;
         list-style: none;
-        min-height: 0;
     }
     .pos-cart-line {
         display: grid;
@@ -349,16 +352,39 @@
     .pos-cart-remove:hover { color: #dc3545; }
 
     /* ── Empty cart state ─────────────────────────────────────────── */
-    .pos-cart-empty {
-        display: grid;
-        justify-items: center;
-        gap: .4rem;
-        padding: 2.5rem .75rem;
-        color: var(--pos-muted);
-        text-align: center;
-        opacity: .6;
+    
+    /* Estado vacío: centrado total y tamaño compacto para zoom al 100% */
+    #pos-cart-items.is-empty {
+        justify-content: center;
+        align-items: center;
+        overflow-y: hidden; /* Evita la barra vertical en estado vacío */
     }
-    .pos-cart-empty svg { width: 56px; height: 56px; margin-bottom: .5rem; color: #c5cbd5; }
+    .pos-cart-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0.5rem;
+        gap: 0.25rem;
+    }
+    .pos-cart-empty svg { width: 38px; height: 38px; margin-bottom: 0.25rem; color: #c5cbd5; }
+
+    .pos-cart-empty div {
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
+
+    .pos-cart-empty small {
+        font-size: 0.8rem;
+        line-height: 1.2;
+        color: var(--pos-muted);}
+
+    /* Compactar ligeramente los campos inferiores para ganar espacio vertical al 100% */
+    #pos-checkout-form .mb-3 {
+        margin-bottom: 0.55rem !important;
+    }
 
     /* ── Cart footer (anchored) ───────────────────────────────────── */
     .pos-cart-footer { margin-top: auto; padding-top: 1rem; }

@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // El IGV es la diferencia entre el total y la base imponible.
         const igvCents = totalCents - taxableBaseCents;
         list.replaceChildren();
+        list.classList.toggle('is-empty', cart.size === 0);
 
         if (cart.size === 0) {
             const empty = document.createElement('li');
@@ -71,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             empty.innerHTML = '<svg viewBox="0 0 64 64" fill="none" aria-hidden="true"><path d="M12 20h40l-4 34H16l-4-34Z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><path d="M23 25v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/><path d="M25 38h14" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><div>Tu pedido está vacío</div><small>Agrega un producto del catálogo para comenzar.</small>';
             const browseButton = document.createElement('button');
             browseButton.type = 'button';
-            browseButton.className = 'btn btn-primary rounded-3 px-3 py-2 mt-2';
+            browseButton.className = 'btn btn-primary btn-sm rounded-3 px-3 py-1 mt-2';
             browseButton.dataset.posBrowse = '';
             browseButton.textContent = 'Seguir explorando';
             empty.append(browseButton);
