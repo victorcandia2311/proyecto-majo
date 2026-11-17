@@ -286,19 +286,24 @@
     .pos-cart-items {
         display: flex;
         flex-direction: column;
-        justify-content: center; /* Centra verticalmente los productos cuando hay pocos */
-        min-height: 145px;       /* Altura mínima suficiente al 100% de zoom sin provocar scroll */
-        max-height: 260px;       /* Solo muestra scroll si agregas muchos productos */
+        justify-content: flex-start; /* Evita que se recorte el primer producto al hacer scroll */
+        flex: 1 1 auto;              /* Ocupa todo el espacio vertical disponible al 100% de zoom */
+        min-height: 150px;
         overflow-y: auto;
-        padding: 0.5rem 0;
+        padding: .25rem 0;
         margin: 0;
         list-style: none;
     }
+
+    /* Cuando hay 1 o 2 productos, los centra sin provocar scroll ni recortes */
+    .pos-cart-items:not(.is-empty) .pos-cart-line:first-child { margin-top: auto; }
+    .pos-cart-items:not(.is-empty) .pos-cart-line:last-child  { margin-bottom: auto; }
+
     .pos-cart-line {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: .5rem;
-        padding: .85rem 0;
+        padding: .65rem 0;
         border-bottom: 1px solid #f0f2f5;
     }
     .pos-cart-line:last-child { border-bottom: 0; }
@@ -352,12 +357,10 @@
     .pos-cart-remove:hover { color: #dc3545; }
 
     /* ── Empty cart state ─────────────────────────────────────────── */
-    
-    /* Estado vacío: centrado total y tamaño compacto para zoom al 100% */
-    #pos-cart-items.is-empty {
+    .pos-cart-items.is-empty {
         justify-content: center;
         align-items: center;
-        overflow-y: hidden; /* Evita la barra vertical en estado vacío */
+        overflow-y: hidden;
     }
     .pos-cart-empty {
         display: flex;
@@ -365,59 +368,45 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: 0.5rem;
-        gap: 0.25rem;
+        padding: .5rem;
+        gap: .2rem;
     }
-    .pos-cart-empty svg { width: 38px; height: 38px; margin-bottom: 0.25rem; color: #c5cbd5; }
-
-    .pos-cart-empty div {
-        font-size: 0.95rem;
-        font-weight: 600;
-        line-height: 1.2;
-    }
-
-    .pos-cart-empty small {
-        font-size: 0.8rem;
-        line-height: 1.2;
-        color: var(--pos-muted);}
-
-    /* Compactar ligeramente los campos inferiores para ganar espacio vertical al 100% */
-    #pos-checkout-form .mb-3 {
-        margin-bottom: 0.55rem !important;
-    }
+    .pos-cart-empty svg { width: 38px; height: 38px; margin-bottom: .25rem; color: #c5cbd5; }
+    .pos-cart-empty div { font-size: .95rem; font-weight: 600; line-height: 1.2; }
+    .pos-cart-empty small { font-size: .8rem; line-height: 1.2; color: var(--pos-muted); }
 
     /* ── Cart footer (anchored) ───────────────────────────────────── */
-    .pos-cart-footer { margin-top: auto; padding-top: 1rem; }
+    .pos-cart-footer { margin-top: auto; padding-top: .5rem; }
 
     .pos-cart-summary {
         display: grid;
-        gap: .5rem;
-        padding: 1rem 0;
+        gap: .35rem;
+        padding: .65rem 0;
         border-top: 1px solid #edf0f4;
     }
     .pos-summary-row {
         display: flex;
         justify-content: space-between;
         color: #667186;
-        font-size: .85rem;
+        font-size: .82rem;
     }
     .pos-summary-total {
-        padding-top: .75rem;
+        padding-top: .5rem;
         border-top: 1px dashed #dfe4ec;
         color: var(--pos-ink);
-        font-size: 1.25rem;
+        font-size: 1.15rem;
         font-weight: 800;
     }
 
     /* ── Checkout form fields ─────────────────────────────────────── */
     .pos-customer-fields {
         display: grid;
-        gap: .65rem;
-        margin: 1rem 0;
+        gap: .45rem;
+        margin: .65rem 0;
     }
     .pos-customer-fields label {
-        margin-bottom: .3rem;
-        font-size: .75rem;
+        margin-bottom: .15rem;
+        font-size: .72rem;
         font-weight: 700;
         letter-spacing: .03em;
         text-transform: uppercase;
@@ -425,9 +414,15 @@
     }
     .pos-customer-fields .form-control,
     .pos-customer-fields .form-select {
-        border-radius: 11px;
-        font-size: .88rem;
+        padding-top: .35rem;
+        padding-bottom: .35rem;
+        border-radius: 10px;
+        font-size: .85rem;
         border-color: #e5e9f1;
+    }
+    .pos-customer-fields .form-text {
+        font-size: .72rem;
+        margin-top: .15rem;
     }
     .pos-customer-fields .form-control:focus,
     .pos-customer-fields .form-select:focus {
