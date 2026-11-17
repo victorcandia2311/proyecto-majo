@@ -108,15 +108,19 @@
         color: inherit;
     }
     .pos-product-media {
-        display: block;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         height: 185px;
+        padding: .75rem;
         overflow: hidden;
-        background: #f0f3f8;
+        background: #ffffff;
+        border-bottom: 1px solid #f0f3f8;
     }
     .pos-product-media img {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
         transition: transform .3s ease;
     }
     .pos-product-card:hover .pos-product-media img { transform: scale(1.04); }
@@ -454,9 +458,11 @@
     /* ── Product detail modal ─────────────────────────────────────── */
     .pos-detail-image {
         width: 100%;
-        max-height: 260px;
+        height: 240px;
+        padding: .5rem;
         border-radius: 1rem;
-        object-fit: cover;
+        background: #ffffff;
+        object-fit: contain;
     }
     .pos-detail-price {
         color: var(--pos-accent);
