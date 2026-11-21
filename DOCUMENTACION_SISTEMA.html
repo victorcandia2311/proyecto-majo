@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Arquitectura, flujo operativo y endpoints del sistema Proyecto Majo.">
+  <title>Documentación del Sistema | Proyecto Majo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #526174;
+      --line: #d7e0e8;
+      --paper: #fff;
+      --surface: #f5f8fa;
+      --teal: #0f766e;
+      --teal-dark: #115e59;
+      --blue: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: #edf2f5;
+      color: var(--ink);
+      font: 15px/1.55 "Segoe UI", Arial, sans-serif;
+    }
+
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 28px auto;
+      padding: 38px 46px;
+      background: var(--paper);
+      box-shadow: 0 8px 32px rgb(15 23 42 / 9%);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      padding-bottom: 18px;
+      border-bottom: 4px solid var(--teal);
+    }
+
+    h1 { margin: 0; font-size: clamp(26px, 4vw, 36px); line-height: 1.15; }
+    header p { margin: 8px 0 0; color: var(--muted); }
+    .metadata { color: var(--muted); font-size: 13px; text-align: right; }
+    .metadata p { margin: 3px 0; }
+
+    h2 {
+      margin: 34px 0 14px;
+      padding-left: 12px;
+      border-left: 4px solid var(--teal);
+      color: var(--teal-dark);
+      font-size: 22px;
+      line-height: 1.25;
+      break-after: avoid;
+    }
+
+    h3 { margin: 22px 0 10px; font-size: 17px; break-after: avoid; }
+    p { margin: 8px 0; }
+    code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: #edf2f7;
+      font: 0.92em Consolas, "Courier New", monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      break-inside: avoid;
+    }
+
+    .card h3 { margin: 0 0 8px; }
+    .card ul { margin: 0; padding-left: 20px; }
+    .card li + li { margin-top: 5px; }
+
+    .diagram {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      overflow-x: auto;
+    }
+
+    .diagram svg { display: block; width: 100%; min-width: 700px; height: auto; }
+    .flow-caption { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+
+    .callout {
+      margin: 16px 0;
+      padding: 12px 16px;
+      border-left: 4px solid #0891b2;
+      background: #ecfeff;
+    }
+
+    .table-wrap { margin: 10px 0 22px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td {
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #172033; color: white; font-weight: 650; }
+    tbody tr:nth-child(even) { background: #f7f9fb; }
+    td:first-child { white-space: nowrap; }
+
+    .method {
+      display: inline-block;
+      min-width: 54px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 750;
+      text-align: center;
+    }
+    .get { background: #dbeafe; color: #1d4ed8; }
+    .post { background: #dcfce7; color: #15803d; }
+    .put { background: #fef3c7; color: #a16207; }
+    .delete { background: #fee2e2; color: #b91c1c; }
+    .role { color: #344256; }
+
+    footer {
+      margin-top: 34px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    @media (max-width: 700px) {
+      main { width: 100%; margin: 0; padding: 24px 18px; }
+      header { align-items: flex-start; flex-direction: column; gap: 10px; }
+      .metadata { text-align: left; }
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      @page { size: A4; margin: 15mm 13mm; }
+      body { background: #fff; font-size: 10pt; }
+      main { width: 100%; margin: 0; padding: 0; box-shadow: none; }
+      h2 { margin-top: 22px; font-size: 16pt; }
+      h3 { font-size: 12pt; }
+      .diagram { overflow: visible; }
+      .diagram svg { min-width: 0; }
+      .table-wrap { overflow: visible; }
+      table { font-size: 8pt; }
+      th, td { padding: 5px; }
+      a { color: inherit; text-decoration: none; }
+      tr, .card, .callout, .diagram { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Proyecto Majo</h1>
+      <p>Documentación del sistema: arquitectura, flujo operativo y catálogo de endpoints</p>
+    </div>
+    <div class="metadata">
+      <p><strong>Stack:</strong> PHP 8.3 · Laravel 13 · Blade · DomPDF</p>
+      <p><strong>Fecha:</strong> 20 de noviembre de 2026</p>
+    </div>
+  </header>
+
+  <section aria-labelledby="arquitectura">
+    <h2 id="arquitectura">1. Arquitectura y roles</h2>
+    <div class="cards">
+      <article class="card">
+        <h3>Tecnología y módulos</h3>
+        <ul>
+          <li>Laravel 13, con vistas del servidor en Blade y respuestas JSON donde corresponde.</li>
+          <li>Eloquent ORM para persistir usuarios, productos, ventas, detalles de venta, proveedores, movimientos de inventario, empleados y asistencias.</li>
+          <li>DomPDF para generar la factura PDF de una venta.</li>
+          <li>Áreas funcionales: autenticación, dashboard, ventas/POS, productos, inventario, proveedores, empleados y asistencia.</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h3>Acceso y middleware</h3>
+        <ul>
+          <li><code>guest</code>: páginas de inicio de sesión, registro y recuperación de contraseña.</li>
+          <li><code>auth</code> y <code>auth.session</code>: sesión autenticada y validada.</li>
+          <li><code>role:admin,empleado</code>: acceso a ventas/POS para administrador y empleado.</li>
+          <li><code>role:admin</code>: acceso al dashboard y administración de productos, inventario, proveedores, empleados y asistencia.</li>
+          <li><code>throttle</code>: limita intentos de inicio de sesión, registro y recuperación.</li>
+        </ul>
+      </article>
+    </div>
+  </section>
+
+  <section aria-labelledby="flujo">
+    <h2 id="flujo">2. Diagrama de flujo del sistema</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 900 520" role="img" aria-labelledby="svg-title svg-desc" xmlns="http://www.w3.org/2000/svg">
+        <title id="svg-title">Flujo de acceso y módulos de Proyecto Majo</title>
+        <desc id="svg-desc">Desde la entrada y autenticación, el usuario accede a ventas o, si es administrador, a los módulos administrativos.</desc>
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 1L10 5L0 9Z" fill="#526174"/>
+          </marker>
+        </defs>
+        <g font-family="Segoe UI, Arial, sans-serif">
+          <rect x="365" y="12" width="170" height="42" rx="21" fill="#0f766e"/>
+          <text x="450" y="38" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">Inicio: GET /</text>
+
+          <path d="M450 54V78" stroke="#526174" stroke-width="2" marker-end="url(#arrow)"/>
+          <rect x="285" y="82" width="330" height="62" rx="8" fill="#f1f5f9" stroke="#64748b" stroke-width="1.5"/>
+          <text x="450" y="106" text-anchor="middle" fill="#172033" font-size="14" font-weight="700">Autenticación</text>
+          <text x="450" y="128" text-anchor="middle" fill="#526174" font-size="12">Login · Registro admin · Recuperación de contraseña</text>
+
+          <path d="M450 144V168" stroke="#526174" stroke-width="2" marker-end="url(#arrow)"/>
+          <polygon points="450,170 548,208 450,246 352,208" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+          <text x="450" y="213" text-anchor="middle" fill="#92400e" font-size="14" font-weight="700">¿Qué rol tiene?</text>
+
+          <path d="M352 208H190V265" fill="none" stroke="#526174" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="260" y="198" text-anchor="middle" fill="#1d4ed8" font-size="12" font-weight="700">empleado</text>
+          <path d="M548 208H710V265" fill="none" stroke="#526174" stroke-width="2" marker-end="url(#arrow)"/>
+          <text x="635" y="198" text-anchor="middle" fill="#0f766e" font-size="12" font-weight="700">admin</text>
+
+          <rect x="25" y="270" width="330" height="218" rx="10" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5"/>
+          <text x="190" y="295" text-anchor="middle" fill="#1e40af" font-size="15" font-weight="700">Ventas / POS</text>
+          <text x="190" y="315" text-anchor="middle" fill="#526174" font-size="11">(acceso: administrador y empleado)</text>
+          <rect x="52" y="330" width="276" height="38" rx="6" fill="#fff" stroke="#93c5fd"/>
+          <text x="190" y="354" text-anchor="middle" fill="#172033" font-size="12">GET /ventas/nueva — iniciar venta</text>
+          <path d="M190 368V380" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <rect x="52" y="383" width="276" height="38" rx="6" fill="#fff" stroke="#93c5fd"/>
+          <text x="190" y="407" text-anchor="middle" fill="#172033" font-size="12">POST/DELETE /ventas/carrito</text>
+          <path d="M190 421V433" stroke="#2563eb" stroke-width="1.5" marker-end="url(#arrow)"/>
+          <rect x="52" y="436" width="276" height="38" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+          <text x="190" y="460" text-anchor="middle" fill="#1e3a8a" font-size="12" font-weight="700">POST /ventas/confirmar</text>
+          <text x="190" y="505" text-anchor="middle" fill="#526174" font-size="11">Historial · Detalle · Factura PDF · Exportación</text>
+
+          <rect x="380" y="270" width="495" height="218" rx="10" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.5"/>
+          <text x="627" y="295" text-anchor="middle" fill="#115e59" font-size="15" font-weight="700">Administración (role:admin)</text>
+          <rect x="399" y="315" width="218" height="64" rx="7" fill="#fff" stroke="#5eead4"/>
+          <text x="508" y="337" text-anchor="middle" fill="#172033" font-size="12" font-weight="700">Dashboard</text>
+          <text x="508" y="356" text-anchor="middle" fill="#526174" font-size="10">/dashboard · /dashboard/data</text>
+          <rect x="637" y="315" width="218" height="64" rx="7" fill="#fff" stroke="#5eead4"/>
+          <text x="746" y="337" text-anchor="middle" fill="#172033" font-size="12" font-weight="700">Productos e inventario</text>
+          <text x="746" y="356" text-anchor="middle" fill="#526174" font-size="10">/productos · /inventario</text>
+          <rect x="399" y="395" width="218" height="64" rx="7" fill="#fff" stroke="#5eead4"/>
+          <text x="508" y="417" text-anchor="middle" fill="#172033" font-size="12" font-weight="700">Proveedores y precios</text>
+          <text x="508" y="436" text-anchor="middle" fill="#526174" font-size="10">/proveedores</text>
+          <rect x="637" y="395" width="218" height="64" rx="7" fill="#fff" stroke="#5eead4"/>
+          <text x="746" y="417" text-anchor="middle" fill="#172033" font-size="12" font-weight="700">Empleados y asistencia</text>
+          <text x="746" y="436" text-anchor="middle" fill="#526174" font-size="10">/empleados · /asistencia</text>
+          <text x="627" y="478" text-anchor="middle" fill="#115e59" font-size="11">El administrador también accede a Ventas / POS</text>
+        </g>
+      </svg>
+    </div>
+    <p class="flow-caption">Las rutas administrativas están dentro del grupo autenticado; el middleware de rol distingue las funciones exclusivas del administrador de las ventas compartidas con empleados.</p>
+  </section>
+
+  <section aria-labelledby="negocio">
+    <h2 id="negocio">3. Flujo principal de venta</h2>
+    <div class="callout">
+      El POS permite crear una venta, gestionar el carrito y confirmarla. Al confirmar, <code>VentaController@confirmar</code> guarda la venta y sus detalles, actualiza el inventario según la lógica del controlador y luego permite consultar el detalle o generar la factura PDF. Las operaciones de carrito y confirmación usan bloqueo de sesión mediante <code>block()</code>.
+    </div>
+    <p>El dashboard administrativo expone métricas de ventas e inventario. Los productos, proveedores, empleados y asistencias se gestionan desde sus controladores; los endpoints de lectura y escritura se detallan abajo.</p>
+  </section>
+
+  <section aria-labelledby="endpoints">
+    <h2 id="endpoints">4. Catálogo de endpoints</h2>
+    <p>Las rutas siguientes corresponden a <code>routes/web.php</code>. Todas las rutas de gestión requieren autenticación, sesión válida y rol administrativo. Las rutas de ventas requieren autenticación y permiten los roles <code>admin</code> y <code>empleado</code>.</p>
+
+    <h3>4.1 Autenticación, registro y recuperación</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Método</th><th>Ruta</th><th>Controlador</th><th>Acceso</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method get">GET</span></td><td><code>/</code></td><td><code>AuthController@home</code></td><td>Público</td><td>Entrada y redirección de inicio.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/login</code></td><td><code>AuthController@create</code></td><td>guest</td><td>Vista de inicio de sesión.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/login/administrador</code></td><td><code>AuthController@adminLogin</code></td><td>guest</td><td>Formulario de administrador.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/login/admin</code></td><td><code>AuthController@store</code></td><td>guest · throttle:login</td><td>Autentica al administrador.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/login/vendedor</code></td><td><code>AuthController@sellerLogin</code></td><td>guest</td><td>Formulario de vendedor.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/login/vendedor</code></td><td><code>AuthController@storeSeller</code></td><td>guest · throttle:login</td><td>Autentica al vendedor.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/registro/administrador</code></td><td><code>AuthController@createAdminRegistration</code></td><td>guest</td><td>Formulario para registrar administrador.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/registro/administrador/codigo</code></td><td><code>AuthController@sendAdminRegistrationCode</code></td><td>guest · throttle:recovery-send</td><td>Solicita código de registro.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/registro/administrador/codigo/verificar</code></td><td><code>AuthController@verifyAdminRegistrationCode</code></td><td>guest · throttle:recovery-reset</td><td>Verifica el código de registro.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/registro/administrador</code></td><td><code>AuthController@registerAdmin</code></td><td>guest · throttle:recovery-reset</td><td>Crea la cuenta de administrador.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/olvide-mi-contrasena</code></td><td><code>PasswordRecoveryController@create</code></td><td>guest</td><td>Formulario de recuperación.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/olvide-mi-contrasena</code></td><td><code>PasswordRecoveryController@store</code></td><td>guest · throttle:recovery-send</td><td>Solicita recuperación de contraseña.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/restablecer-contrasena</code></td><td><code>PasswordRecoveryController@edit</code></td><td>guest</td><td>Formulario para restablecer contraseña.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/restablecer-contrasena</code></td><td><code>PasswordRecoveryController@update</code></td><td>guest · throttle:recovery-reset</td><td>Actualiza contraseña.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/logout</code></td><td><code>AuthController@destroy</code></td><td>auth</td><td>Cierra la sesión.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.2 Dashboard (solo administrador)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Método</th><th>Ruta</th><th>Controlador</th><th>Acceso</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method get">GET</span></td><td><code>/dashboard</code></td><td><code>DashboardController@index</code></td><td>admin</td><td>Vista principal del dashboard.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/dashboard/data</code></td><td><code>DashboardController@data</code></td><td>admin</td><td>JSON con resumen, variación, ventas mensuales, métodos de pago, ranking y alertas de stock.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.3 Ventas y POS (administrador y empleado)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Método</th><th>Ruta</th><th>Controlador</th><th>Acceso</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method get">GET</span></td><td><code>/ventas</code></td><td><code>VentaController@index</code></td><td>admin, empleado</td><td>Listado e historial de ventas.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/ventas/exportar</code></td><td><code>VentaController@exportar</code></td><td>admin, empleado</td><td>Exporta el reporte de ventas.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/ventas/nueva</code></td><td><code>VentaController@create</code></td><td>admin, empleado</td><td>Interfaz de nueva venta / POS.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/ventas/carrito</code></td><td><code>VentaController@agregar</code></td><td>admin, empleado · block</td><td>Agrega producto al carrito.</td></tr>
+          <tr><td><span class="method delete">DELETE</span></td><td><code>/ventas/carrito</code></td><td><code>VentaController@vaciar</code></td><td>admin, empleado · block</td><td>Vacía el carrito.</td></tr>
+          <tr><td><span class="method delete">DELETE</span></td><td><code>/ventas/carrito/{producto}</code></td><td><code>VentaController@eliminar</code></td><td>admin, empleado · block</td><td>Quita un producto del carrito.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/ventas/confirmar</code></td><td><code>VentaController@confirmar</code></td><td>admin, empleado · block</td><td>Confirma y registra la venta.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/ventas/{venta}/pdf</code></td><td><code>VentaController@pdf</code></td><td>admin, empleado</td><td>Genera la factura PDF.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/ventas/{venta}</code></td><td><code>VentaController@show</code></td><td>admin, empleado</td><td>Consulta el detalle de una venta.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.4 Productos e inventario (solo administrador)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Método</th><th>Ruta</th><th>Controlador</th><th>Acceso</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method get">GET</span></td><td><code>/productos</code></td><td><code>ProductoController@index</code></td><td>admin</td><td>Lista productos.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/productos/create</code></td><td><code>ProductoController@create</code></td><td>admin</td><td>Formulario de producto.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/productos</code></td><td><code>ProductoController@store</code></td><td>admin</td><td>Crea producto.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/productos/{producto}/edit</code></td><td><code>ProductoController@edit</code></td><td>admin</td><td>Formulario para editar producto.</td></tr>
+          <tr><td><span class="method put">PUT/PATCH</span></td><td><code>/productos/{producto}</code></td><td><code>ProductoController@update</code></td><td>admin</td><td>Actualiza producto.</td></tr>
+          <tr><td><span class="method delete">DELETE</span></td><td><code>/productos/{producto}</code></td><td><code>ProductoController@destroy</code></td><td>admin</td><td>Elimina producto.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/inventario</code></td><td><code>InventarioController@index</code></td><td>admin</td><td>Consulta inventario y movimientos.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/inventario/aumentar</code></td><td><code>InventarioController@aumentar</code></td><td>admin</td><td>Registra aumento de stock.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.5 Proveedores y precios (solo administrador)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Método</th><th>Ruta</th><th>Controlador</th><th>Acceso</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method get">GET</span></td><td><code>/proveedores</code></td><td><code>ProveedorController@index</code></td><td>admin</td><td>Lista proveedores.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/proveedores</code></td><td><code>ProveedorController@store</code></td><td>admin</td><td>Crea proveedor.</td></tr>
+          <tr><td><span class="method put">PUT/PATCH</span></td><td><code>/proveedores/{proveedor}</code></td><td><code>ProveedorController@update</code></td><td>admin</td><td>Actualiza proveedor.</td></tr>
+          <tr><td><span class="method delete">DELETE</span></td><td><code>/proveedores/{proveedor}</code></td><td><code>ProveedorController@destroy</code></td><td>admin</td><td>Elimina proveedor.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/proveedores/asignar-producto</code></td><td><code>ProveedorController@asignarProducto</code></td><td>admin</td><td>Vista para asignar producto.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/proveedores/precios</code></td><td><code>ProveedorController@guardarPrecio</code></td><td>admin</td><td>Guarda precio de proveedor-producto.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/proveedores/{proveedor}/productos</code></td><td><code>ProveedorController@productos</code></td><td>admin</td><td>Lista productos asociados al proveedor.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/proveedores/{proveedor}/productos</code></td><td><code>ProveedorController@guardarPrecioProveedor</code></td><td>admin</td><td>Asocia producto y precio al proveedor.</td></tr>
+          <tr><td><span class="method put">PUT</span></td><td><code>/proveedores/{proveedor}/productos/{producto}</code></td><td><code>ProveedorController@actualizarPrecio</code></td><td>admin</td><td>Actualiza precio asociado.</td></tr>
+          <tr><td><span class="method delete">DELETE</span></td><td><code>/proveedores/{proveedor}/productos/{producto}</code></td><td><code>ProveedorController@eliminarPrecio</code></td><td>admin</td><td>Elimina asociación de producto y proveedor.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>4.6 Empleados y asistencia (solo administrador)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Método</th><th>Ruta</th><th>Controlador</th><th>Acceso</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><span class="method get">GET</span></td><td><code>/empleados</code></td><td><code>EmpleadoController@index</code></td><td>admin</td><td>Lista empleados.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/empleados</code></td><td><code>EmpleadoController@store</code></td><td>admin</td><td>Registra empleado.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/empleados/{empleado}/edit</code></td><td><code>EmpleadoController@edit</code></td><td>admin</td><td>Formulario de edición.</td></tr>
+          <tr><td><span class="method put">PUT/PATCH</span></td><td><code>/empleados/{empleado}</code></td><td><code>EmpleadoController@update</code></td><td>admin</td><td>Actualiza empleado.</td></tr>
+          <tr><td><span class="method delete">DELETE</span></td><td><code>/empleados/{empleado}</code></td><td><code>EmpleadoController@destroy</code></td><td>admin</td><td>Elimina empleado.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/asistencia</code></td><td><code>AsistenciaController@index</code></td><td>admin</td><td>Consulta asistencia.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/asistencia/inventario</code></td><td><code>AsistenciaController@inventario</code></td><td>admin</td><td>Vista de inventario asociada a asistencia.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/asistencia</code></td><td><code>AsistenciaController@store</code></td><td>admin</td><td>Crea registro de asistencia.</td></tr>
+          <tr><td><span class="method get">GET</span></td><td><code>/asistencia/{asistencia}/edit</code></td><td><code>AsistenciaController@edit</code></td><td>admin</td><td>Formulario de edición de asistencia.</td></tr>
+          <tr><td><span class="method put">PUT/PATCH</span></td><td><code>/asistencia/{asistencia}</code></td><td><code>AsistenciaController@update</code></td><td>admin</td><td>Actualiza registro de asistencia.</td></tr>
+          <tr><td><span class="method delete">DELETE</span></td><td><code>/asistencia/{asistencia}</code></td><td><code>AsistenciaController@destroy</code></td><td>admin</td><td>Elimina registro de asistencia.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/asistencia/ingreso</code></td><td><code>AsistenciaController@registrarIngreso</code></td><td>admin</td><td>Registra ingreso de empleado regular.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/asistencia/salida</code></td><td><code>AsistenciaController@registrarSalida</code></td><td>admin</td><td>Registra salida de empleado regular.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/asistencia/temporal</code></td><td><code>AsistenciaController@registrarTemporal</code></td><td>admin</td><td>Registra empleado temporal.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/asistencia/temporal/ingreso</code></td><td><code>AsistenciaController@registrarIngresoTemporal</code></td><td>admin</td><td>Registra ingreso temporal.</td></tr>
+          <tr><td><span class="method post">POST</span></td><td><code>/asistencia/temporal/salida</code></td><td><code>AsistenciaController@registrarSalidaTemporal</code></td><td>admin</td><td>Registra salida temporal.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Documento generado a partir de las rutas y controladores presentes en el repositorio. Para confirmar cambios recientes de rutas, comparar con <code>routes/web.php</code>.
+  </footer>
+</main>
+</body>
+</html>

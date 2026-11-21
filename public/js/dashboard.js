@@ -26,6 +26,22 @@ document.addEventListener('DOMContentLoaded', () => {
     updateClock();
     window.setInterval(updateClock, 1000);
 
+    const isDarkTheme = () => document.documentElement.dataset.bsTheme === 'dark';
+
+    const getPalette = () => {
+        const dark = isDarkTheme();
+        return {
+            gold: dark ? '#e6c15a' : '#c49a38',
+            goldFillStart: dark ? 'rgba(230, 193, 90, 0.28)' : 'rgba(196, 154, 56, 0.24)',
+            goldFillEnd: dark ? 'rgba(230, 193, 90, 0.01)' : 'rgba(196, 154, 56, 0.015)',
+            blue: dark ? '#60a5fa' : '#2563eb',
+            emerald: dark ? '#34d399' : '#059669',
+            donutColors: dark
+                ? ['#e6c15a', '#34d399', '#60a5fa', '#fbbf24', '#fb7185', '#2dd4bf']
+                : ['#c49a38', '#059669', '#2563eb', '#d97706', '#e11d48', '#0d9488'],
+        };
+    };
+
     const setValue = (key, value) => {
         const element = document.querySelector(`[data-dashboard-value="${key}"]`);
         element.textContent = value;
@@ -74,10 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
         stockCard.classList.toggle('no-alerts', !hasAlerts);
         stockIcon.className = `bi ${hasAlerts ? 'bi-exclamation-triangle' : 'bi-check-circle'}`;
 
+        const palette = getPalette();
         const months = data.meses;
-        renderSparkline('ingresos', months.map((item) => Number(item.total)), '#4f46e5');
-        renderSparkline('ventas', months.map((item) => Number(item.cantidad_ventas)), '#2563eb');
-        renderSparkline('productos', months.map((item) => Number(item.unidades_vendidas)), '#059669');
+        renderSparkline('ingresos', months.map((item) => Number(item.total)), palette.gold);
+        renderSparkline('ventas', months.map((item) => Number(item.cantidad_ventas)), palette.blue);
+        renderSparkline('productos', months.map((item) => Number(item.unidades_vendidas)), palette.emerald);
         metricsElement.setAttribute('aria-busy', 'false');
     };
 
@@ -142,11 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (canvas) Chart.getChart(canvas)?.destroy();
         });
 
-        const colors = ['#4f46e5', '#059669', '#0ea5e9', '#f59e0b', '#e11d48', '#14b8a6'];
+        const palette = getPalette();
         const chartStyles = getComputedStyle(dashboard);
-        const chartText = chartStyles.getPropertyValue('--dashboard-chart-text').trim() || '#8792a2';
-        const chartGrid = chartStyles.getPropertyValue('--dashboard-chart-grid').trim() || '#edf0f5';
-        const chartSurface = chartStyles.getPropertyValue('--dashboard-chart-surface').trim() || '#fff';
+        const chartText = chartStyles.getPropertyValue('--dashboard-chart-text').trim() || '#6e6456';
+        const chartGrid = chartStyles.getPropertyValue('--dashboard-chart-grid').trim() || '#e5dac3';
+        const chartSurface = chartStyles.getPropertyValue('--dashboard-chart-surface').trim() || '#fcf9f2';
         const baseOptions = {
             responsive: true,
             maintainAspectRatio: false,
@@ -176,17 +193,17 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             const context = incomeCanvas.getContext('2d');
             const gradient = context.createLinearGradient(0, 0, 0, 300);
-            gradient.addColorStop(0, 'rgba(79, 70, 229, 0.22)');
-            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.015)');
+            gradient.addColorStop(0, palette.goldFillStart);
+            gradient.addColorStop(1, palette.goldFillEnd);
             new Chart(incomeCanvas, {
                 type: 'line',
                 data: {
                     labels: income.map((item) => monthLabel(item.mes)),
                     datasets: [{
                         label: 'Ingresos', data: income.map((item) => Number(item.total)),
-                        borderColor: '#4f46e5', backgroundColor: gradient, fill: true,
+                        borderColor: palette.gold, backgroundColor: gradient, fill: true,
                         tension: 0.4, borderWidth: 2.5, pointRadius: 3, pointHoverRadius: 5,
-                        pointBackgroundColor: chartSurface, pointBorderColor: '#4f46e5', pointBorderWidth: 2,
+                        pointBackgroundColor: chartSurface, pointBorderColor: palette.gold, pointBorderWidth: 2,
                     }],
                 },
                 options: {
@@ -212,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     labels: payments.map((item) => item.metodo_pago),
                     datasets: [{
                         data: payments.map((item) => Number(item.total)),
-                        backgroundColor: colors, borderColor: chartSurface, borderWidth: 4, hoverOffset: 5,
+                        backgroundColor: palette.donutColors, borderColor: chartSurface, borderWidth: 4, hoverOffset: 5,
                     }],
                 },
                 options: {
@@ -235,7 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     labels: products.map((item) => item.nombre),
                     datasets: [{
                         label: 'Unidades', data: products.map((item) => Number(item.cantidad)),
-                        backgroundColor: '#4f46e5', borderRadius: 5, borderSkipped: false, barThickness: 18,
+                        backgroundColor: palette.gold, borderRadius: 5, borderSkipped: false, barThickness: 18,
                     }],
                 },
                 options: {
@@ -287,6 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('[data-dashboard-retry]').addEventListener('click', loadDashboard);
     window.addEventListener('majo:theme-change', () => {
         if (latestDashboardData) {
+            renderMetrics(latestDashboardData);
             renderCharts(latestDashboardData);
         }
     });

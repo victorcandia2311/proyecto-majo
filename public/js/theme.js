@@ -25,7 +25,7 @@
         root.dataset.themePreference = preference;
 
         const themeColor = document.querySelector('meta[name="theme-color"]');
-        themeColor?.setAttribute('content', resolvedTheme === 'dark' ? '#111827' : '#f3f4f6');
+        themeColor?.setAttribute('content', resolvedTheme === 'dark' ? '#0d1017' : '#f6f1e7');
 
         window.dispatchEvent(new CustomEvent('majo:theme-change', {
             detail: { preference, resolvedTheme },

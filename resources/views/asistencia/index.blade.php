@@ -6,17 +6,19 @@
 <style>
     /* ═══ Modal form fields ═══════════════════════════════════════════════ */
     .asistencia-modal .modal-content {
-        border: 0;
+        border: 1px solid var(--theme-border);
         border-radius: 1rem;
+        background: var(--theme-surface);
+        color: var(--theme-text);
         box-shadow: 0 20px 60px rgba(15, 23, 42, .18);
     }
     .asistencia-modal .modal-header {
-        border-bottom: 1px solid #f0f2f5;
+        border-bottom: 1px solid var(--theme-border);
         padding: 1.25rem 1.5rem .9rem;
     }
     .asistencia-modal .modal-body  { padding: 1.25rem 1.5rem; }
     .asistencia-modal .modal-footer {
-        border-top: 1px solid #f0f2f5;
+        border-top: 1px solid var(--theme-border);
         padding: .9rem 1.5rem 1.25rem;
         gap: .5rem;
     }
@@ -34,20 +36,20 @@
         font-weight: 700;
         letter-spacing: .04em;
         text-transform: uppercase;
-        color: #6b7280;
+        color: var(--theme-muted);
         margin-bottom: .35rem;
     }
     .asistencia-modal .form-control,
     .asistencia-modal .form-select {
         min-height: 44px;
         border-radius: .65rem;
-        border-color: #e5e7eb;
+        border-color: var(--theme-border);
         font-size: .9rem;
     }
     .asistencia-modal .form-control:focus,
     .asistencia-modal .form-select:focus {
-        border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+        border-color: var(--imperial-gold);
+        box-shadow: 0 0 0 3px var(--imperial-gold-soft);
     }
 </style>
 @endpush

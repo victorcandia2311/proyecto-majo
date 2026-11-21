@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#111827">
+    <meta name="theme-color" content="#f6f1e7">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Panel') · MAJO</title>
     <link rel="icon" href="{{ asset('favicon.ico') }}">
@@ -22,13 +22,20 @@
         <header class="main-header">
             <div class="header-inner d-flex align-items-center justify-content-between w-100">
                 <div class="header-start d-flex align-items-center">
-                <button class="sidebar-toggle" type="button" aria-controls="appSidebar" aria-expanded="false" aria-label="Mostrar navegación" data-sidebar-toggle>
-                    <i class="bi bi-list" aria-hidden="true"></i>
-                </button>
-                <a class="header-brand" href="{{ route(auth()->user()->homeRoute()) }}">
-                    <i class="bi bi-box-seam-fill" aria-hidden="true"></i>
-                    <span>Sistema de Inventario</span>
-                </a>
+                    <button class="sidebar-toggle" type="button" aria-controls="appSidebar" aria-expanded="false" aria-label="Mostrar navegación" data-sidebar-toggle>
+                        <i class="bi bi-list" aria-hidden="true"></i>
+                    </button>
+                    <a class="header-brand" href="{{ route(auth()->user()->homeRoute()) }}">
+                        <img
+                            src="{{ asset('images/logo_roma.png') }}?v={{ filemtime(public_path('images/logo_roma.png')) }}"
+                            alt=""
+                            class="header-brand-logo"
+                        >
+                        <span class="header-brand-copy">
+                            <strong class="header-brand-title">ROMA CLUB</strong>
+                            <small class="header-brand-sub">PRIVÉ &amp; MANAGEMENT</small>
+                        </span>
+                    </a>
                 </div>
                 <div class="header-account d-flex align-items-center ms-auto">
                     <div class="theme-control">
@@ -43,8 +50,8 @@
                             data-theme-selector
                             data-native-select
                         >
-                            <option value="light">Claro</option>
-                            <option value="dark">Oscuro</option>
+                            <option value="light">Claro Imperial</option>
+                            <option value="dark">Oscuro Imperial</option>
                             <option value="auto">Automático</option>
                         </select>
                         <span class="visually-hidden" data-theme-status role="status" aria-live="polite"></span>
@@ -66,17 +73,23 @@
                 </div>
             </div>
         </header>
+
         <aside class="main-sidebar" id="appSidebar" aria-label="Menú del sistema">
             <div class="sidebar-brand">
-                <span class="brand-mark"><i class="bi bi-grid-1x2-fill" aria-hidden="true"></i></span>
-                <span>MAJO</span>
+                <img
+                    src="{{ asset('images/logo_roma.png') }}?v={{ filemtime(public_path('images/logo_roma.png')) }}"
+                        alt="Logo MAJO"
+                    class="sidebar-logo-img"
+                >
+                <div class="sidebar-brand-copy">
+                    <span class="sidebar-brand-title">ROMA CLUB</span>
+                    <small class="sidebar-brand-sub">PRIVÉ &amp; MANAGEMENT</small>
+                </div>
                 <button class="sidebar-close" type="button" aria-label="Cerrar navegación" data-sidebar-close>×</button>
             </div>
 
             <nav class="sidebar-nav" aria-label="Navegación principal">
-
                 @if(auth()->user()->isAdmin())
-                {{-- ── 1. Principal ── --}}
                 <div class="sidebar-section-label">PRINCIPAL</div>
                 <a class="sidebar-link" href="{{ route('dashboard.index') }}"
                    @if(request()->routeIs('dashboard.*')) aria-current="page" @endif>
@@ -84,7 +97,6 @@
                     <span>Dashboard</span>
                 </a>
 
-                {{-- ── 2. Gestión de Inventario ── --}}
                 @php
                     $inInventario = request()->routeIs('productos.*', 'inventario.*', 'proveedores.*');
                 @endphp
@@ -121,7 +133,6 @@
                     </div>
                 </div>
 
-                {{-- ── 3. Recursos Humanos ── --}}
                 @php
                     $inRRHH = request()->routeIs('empleados.*', 'asistencia.*');
                 @endphp
@@ -152,10 +163,8 @@
                         </a>
                     </div>
                 </div>
+                @endif
 
-                @endif {{-- /isAdmin --}}
-
-                {{-- ── 4. Comercial (visible para todos) ── --}}
                 @php
                     $inComercial = request()->routeIs('ventas.*');
                 @endphp
@@ -186,9 +195,9 @@
                         </a>
                     </div>
                 </div>
-
             </nav>
         </aside>
+
         <div class="sidebar-overlay" data-sidebar-close aria-hidden="true"></div>
         <main class="main-content" id="contenido" tabindex="-1">
             @unless (request()->routeIs('dashboard.index'))
@@ -205,6 +214,7 @@
             <footer class="app-footer">MAJO · Sistema de inventario y ventas · Versión 2.01</footer>
         </main>
     </div>
+
     <script id="app-feedback-data" type="application/json">{!! Illuminate\Support\Js::encode([
         'errors' => $errors->all(),
         'success' => session('feedback_success') ?? (session('mensaje') ? ([
@@ -221,6 +231,7 @@
             'receiptUrl' => route('ventas.pdf', session('venta_exitosa')),
         ] : null,
     ]) !!}</script>
+
     <div class="modal fade" id="confirm-action-modal" tabindex="-1" aria-labelledby="confirm-action-title" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -236,6 +247,7 @@
             </div>
         </div>
     </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js" defer></script>
     <script src="{{ asset('js/app.js') }}?v={{ filemtime(public_path('js/app.js')) }}" defer></script>

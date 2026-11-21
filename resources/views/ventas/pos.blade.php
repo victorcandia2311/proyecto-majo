@@ -6,13 +6,13 @@
 <style>
     /* ── Variables ────────────────────────────────────────────────── */
     .pos-page {
-        --pos-ink:    #172033;
-        --pos-muted:  #748096;
-        --pos-accent: #f05a28;
-        --pos-accent-hover: #d9471b;
-        --pos-accent-glow: #f05a2840;
-        --pos-surface: #ffffff;
-        --pos-bg:     #f4f6fb;
+        --pos-ink: var(--theme-text);
+        --pos-muted: var(--theme-muted);
+        --pos-accent: var(--imperial-gold);
+        --pos-accent-hover: var(--imperial-gold-hover);
+        --pos-accent-glow: var(--imperial-gold-soft);
+        --pos-surface: var(--theme-surface);
+        --pos-bg: var(--theme-content-bg);
         color: var(--pos-ink);
     }
 
@@ -114,8 +114,8 @@
         height: 185px;
         padding: .75rem;
         overflow: hidden;
-        background: #ffffff;
-        border-bottom: 1px solid #f0f3f8;
+        background: var(--theme-surface-muted);
+        border-bottom: 1px solid var(--theme-border);
     }
     .pos-product-media img {
         width: 100%;
@@ -259,8 +259,8 @@
         height: 38px;
         place-items: center;
         border-radius: 12px;
-        background: #fff4ee;
-        color: var(--pos-accent);
+        background: var(--imperial-gold-soft);
+        color: var(--imperial-gold-ink);
         font-size: 1.1rem;
         flex-shrink: 0;
     }
@@ -333,16 +333,16 @@
     .pos-quantity-button {
         width: 30px;
         height: 30px;
-        border: 1.5px solid #e3e7ef;
+        border: 1.5px solid var(--theme-border);
         border-radius: 9px;
-        background: #fff;
+        background: var(--theme-surface);
         color: var(--pos-ink);
         font-size: .9rem;
         display: grid;
         place-items: center;
         transition: border-color .15s, background .15s;
     }
-    .pos-quantity-button:hover { border-color: var(--pos-accent); background: #fff4ee; }
+    .pos-quantity-button:hover { border-color: var(--imperial-gold); background: var(--imperial-gold-soft); }
     .pos-quantity-value {
         min-width: 1.4rem;
         text-align: center;
@@ -461,13 +461,112 @@
         height: 240px;
         padding: .5rem;
         border-radius: 1rem;
-        background: #ffffff;
+        background: var(--theme-surface-muted);
         object-fit: contain;
     }
     .pos-detail-price {
         color: var(--pos-accent);
         font-size: 1.35rem;
         font-weight: 800;
+    }
+
+    .pos-page {
+        --pos-ink: var(--theme-text);
+        --pos-muted: var(--theme-muted);
+        --pos-accent: var(--imperial-gold);
+        --pos-accent-hover: var(--imperial-gold-hover);
+        --pos-accent-glow: var(--imperial-gold-soft);
+        --pos-surface: var(--theme-surface);
+        --pos-soft-surface: var(--theme-surface-muted);
+        --pos-surface-border: var(--theme-border);
+        --pos-bg: var(--theme-content-bg);
+        --pos-action-text: #19140b;
+    }
+
+    .pos-page .pos-search-input,
+    .pos-page .pos-quantity-button,
+    .pos-page .pos-customer-fields .form-control,
+    .pos-page .pos-customer-fields .form-select {
+        border-color: var(--pos-surface-border);
+        background-color: var(--pos-surface);
+        color: var(--pos-ink);
+    }
+
+    .pos-page .pos-product-card {
+        border: 1px solid var(--pos-surface-border);
+        background: var(--pos-surface);
+        color: var(--pos-ink);
+    }
+
+    .pos-page .pos-product-media,
+    .pos-page .pos-detail-image {
+        border-color: var(--pos-surface-border);
+        background: var(--pos-soft-surface);
+    }
+
+    #posCart .pos-cart-title-icon,
+    #posCart .pos-cart-count {
+        background: var(--imperial-gold-soft);
+        color: var(--imperial-gold-ink);
+    }
+
+    #posCart .pos-cart-line,
+    #posCart .pos-cart-summary {
+        border-color: var(--pos-surface-border);
+    }
+
+    #posCart .pos-summary-row,
+    #posCart .pos-cart-line-price,
+    #posCart .pos-cart-remove {
+        color: var(--pos-muted);
+    }
+
+    #posCart .pos-quantity-button {
+        border-color: var(--theme-border);
+        background: var(--theme-surface);
+        color: var(--theme-text);
+    }
+
+    #posCart .pos-quantity-button:hover {
+        border-color: var(--imperial-gold);
+        background: var(--imperial-gold-soft);
+        color: var(--pos-ink);
+    }
+
+    .pos-page .pos-add-button,
+    .pos-page .pos-fab {
+        background: var(--imperial-gold);
+        color: var(--pos-action-text);
+    }
+
+    .pos-page .pos-add-button:hover,
+    .pos-page .pos-fab:hover {
+        background: var(--imperial-gold-hover);
+        color: var(--pos-action-text);
+    }
+
+    #posCart .pos-checkout-button {
+        background: var(--imperial-gold);
+        color: #19140b;
+    }
+
+    #posCart .pos-checkout-button:hover:not(:disabled) {
+        background: var(--imperial-gold-hover);
+        color: #19140b;
+    }
+
+    #posCart .pos-checkout-button:disabled {
+        background: var(--theme-surface-muted);
+        color: var(--theme-muted);
+    }
+
+    .pos-detail-image {
+        border: 1px solid var(--theme-border);
+        background: var(--theme-surface-muted);
+    }
+
+    .pos-page .pos-fab {
+        box-shadow: 0 8px 26px rgba(154, 116, 30, 0.28);
     }
 
     /* ── Responsive tweaks ────────────────────────────────────────── */
