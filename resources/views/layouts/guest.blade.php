@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f6f1e7">
-    <title>@yield('title', 'Acceso') · ROMA CLUB</title>
-    <link rel="icon" href="{{ asset('favicon.ico') }}">
+    <title>ROMA CLUB</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo_roma.png') }}?v={{ filemtime(public_path('images/logo_roma.png')) }}">
+    <link rel="shortcut icon" type="image/png" href="{{ asset('images/logo_roma.png') }}?v={{ filemtime(public_path('images/logo_roma.png')) }}">
     <script src="{{ asset('js/theme.js') }}?v={{ filemtime(public_path('js/theme.js')) }}"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
