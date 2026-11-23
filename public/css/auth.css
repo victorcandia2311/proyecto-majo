@@ -41,10 +41,13 @@ body.auth-page {
 }
 
 .auth-brand { text-align: center; padding-bottom: 26px; margin-bottom: 26px; border-bottom: 1px solid #b6d4ff16; }
-.auth-logo { display: grid; place-items: center; margin: 0 auto 12px; width: 60px; height: 60px; border-radius: 17px; border: 1px solid #67e8f932; background: linear-gradient(145deg, #29d4f41c, #2875ff20); box-shadow: 0 0 30px #229cff20; }
-.auth-logo svg { width: 38px; height: 38px; }
-.auth-wordmark { color: #fff; font-size: 2rem; font-weight: 800; letter-spacing: 0.09em; line-height: 1.2; }
-.auth-brand p { color: #b4c4db; font-size: 0.85rem; margin: 8px 0 0; }
+.auth-brand-identity { display: flex; align-items: center; justify-content: center; gap: 15px; }
+.auth-logo { position: relative; display: grid; place-items: center; flex: 0 0 68px; width: 68px; height: 68px; overflow: hidden; margin: 0; border-radius: 17px; border: 1px solid #67e8f932; background: linear-gradient(145deg, #29d4f41c, #2875ff20); box-shadow: 0 0 30px #229cff20; }
+.auth-logo-image { position: absolute; top: 0; left: 0; width: 200%; max-width: none; height: auto; transform: translate(-16%, -23%); }
+.auth-brand-copy { min-width: 0; text-align: left; }
+.auth-wordmark { color: #fff; font-family: Georgia, "Times New Roman", serif; font-size: 1.55rem; font-weight: 700; letter-spacing: 0.07em; line-height: 1.15; }
+.auth-brand-tagline { color: #e6c15a; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.12em; margin: 5px 0 0; white-space: nowrap; }
+.auth-brand-description { color: #b4c4db; font-size: 0.82rem; margin: 12px 0 0; }
 .auth-content h1 { color: #f4f7ff; font-size: 1.3rem; font-weight: 650; line-height: 1.35; margin: 0 0 9px; }
 .auth-description { color: #aebed5; font-size: 0.86rem; line-height: 1.65; margin-bottom: 26px; }
 .auth-field { margin-bottom: 20px; }
@@ -97,6 +100,10 @@ body.auth-page {
     .auth-shell { padding: 24px 16px; }
     .auth-card { padding: 28px 24px 22px; }
     .auth-brand { padding-bottom: 22px; margin-bottom: 22px; }
+    .auth-brand-identity { gap: 11px; }
+    .auth-logo { flex-basis: 60px; width: 60px; height: 60px; }
+    .auth-wordmark { font-size: 1.3rem; }
+    .auth-brand-tagline { font-size: 0.55rem; letter-spacing: 0.09em; }
     .auth-options { font-size: 0.75rem; }
 }
 

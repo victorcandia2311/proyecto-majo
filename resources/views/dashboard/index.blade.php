@@ -6,12 +6,18 @@
 <div class="dashboard-page" data-dashboard-endpoint="{{ route('dashboard.data') }}">
     <header class="dashboard-heading">
         <div>
-            <p class="dashboard-eyebrow">MAJO <span aria-hidden="true">/</span> INDICADORES</p>
+            <p class="dashboard-eyebrow">MAJO <span aria-hidden="true">/</span> INDICADORES PRINCIPALES</p>
             <h1>Resumen General</h1>
         </div>
-        <div class="dashboard-clock" aria-label="Fecha y hora de Perú">
-            <span class="dashboard-clock-time" id="dashboard-clock-time">--:--:--</span>
-            <time class="dashboard-clock-date" id="dashboard-clock-date">Cargando fecha…</time>
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <div class="dashboard-clock" aria-label="Fecha y hora de Perú">
+                <span class="dashboard-clock-time" id="dashboard-clock-time">--:--:--</span>
+                <time class="dashboard-clock-date" id="dashboard-clock-date">Cargando fecha…</time>
+            </div>
+            <a class="btn btn-primary d-inline-flex align-items-center gap-2" href="{{ route('ventas.nueva') }}">
+                <i class="bi bi-cart-plus" aria-hidden="true"></i>
+                <span>Nueva Venta (POS)</span>
+            </a>
         </div>
     </header>
 
@@ -20,19 +26,19 @@
     </div>
 
     <section class="dashboard-metrics" aria-label="Resumen del mes" aria-busy="true" data-dashboard-metrics>
-        <article class="metric-card">
+        <article class="metric-card metric-card-income">
             <div class="metric-card-top"><span>Ingresos del Mes</span><span class="metric-icon metric-icon-indigo" aria-hidden="true">S/</span></div>
             <p class="metric-value" data-dashboard-value="ingresos"><span class="dashboard-skeleton"></span></p>
             <p class="metric-foot" data-dashboard-variation><span class="dashboard-skeleton dashboard-skeleton-short"></span></p>
             <svg class="metric-sparkline" data-dashboard-sparkline="ingresos" viewBox="0 0 120 32" aria-hidden="true"></svg>
         </article>
-        <article class="metric-card">
+        <article class="metric-card metric-card-sales">
             <div class="metric-card-top"><span>Ventas Realizadas</span><span class="metric-icon metric-icon-blue" aria-hidden="true"><i class="bi bi-receipt"></i></span></div>
             <p class="metric-value" data-dashboard-value="ventas"><span class="dashboard-skeleton"></span></p>
             <p class="metric-foot">Durante el mes actual</p>
             <svg class="metric-sparkline" data-dashboard-sparkline="ventas" viewBox="0 0 120 32" aria-hidden="true"></svg>
         </article>
-        <article class="metric-card">
+        <article class="metric-card metric-card-units">
             <div class="metric-card-top"><span>Artículos Vendidos</span><span class="metric-icon metric-icon-green" aria-hidden="true"><i class="bi bi-box-seam"></i></span></div>
             <p class="metric-value" data-dashboard-value="productos"><span class="dashboard-skeleton"></span></p>
             <p class="metric-foot">Unidades despachadas este mes</p>
@@ -48,7 +54,7 @@
     <section class="dashboard-charts" aria-label="Gráficos de ventas">
         <article class="dashboard-panel dashboard-panel-wide">
             <header class="dashboard-panel-heading">
-                <div><p class="dashboard-panel-kicker">TENDENCIA</p><h2>Evolución de Ingresos</h2></div>
+                <div><p class="dashboard-panel-kicker">TENDENCIA HISTÓRICA</p><h2>Evolución de Ingresos</h2></div>
                 <span class="chart-period"><i aria-hidden="true"></i> Últimos 12 meses</span>
             </header>
             <div class="dashboard-chart dashboard-chart-main is-loading" data-dashboard-chart>

@@ -1,0 +1,160 @@
+.
+  |-AGENTS.md
+  |-app
+  |  |-Http
+  |  |  |-Controllers
+  |  |  |-Middleware
+  |  |  |-Requests
+  |  |-Mail
+  |  |  |-CodigoRecuperacion.php
+  |  |  |-CodigoRegistroAdministrador.php
+  |  |-Models
+  |  |  |-Asistencia.php
+  |  |  |-DetalleVenta.php
+  |  |  |-Empleado.php
+  |  |  |-EmpleadoTemporal.php
+  |  |  |-MovimientoInventario.php
+  |  |  |-Producto.php
+  |  |  |-ProductoProveedor.php
+  |  |  |-Proveedor.php
+  |  |  |-User.php
+  |  |  |-Venta.php
+  |  |-Providers
+  |  |  |-AppServiceProvider.php
+  |-artisan
+  |-boost.json
+  |-bootstrap
+  |  |-app.php
+  |  |-cache
+  |  |  |-packages.php
+  |  |  |-services.php
+  |  |-providers.php
+  |-CLAUDE.md
+  |-composer.json
+  |-composer.lock
+  |-config
+  |  |-app.php
+  |  |-auth.php
+  |  |-cache.php
+  |  |-database.php
+  |  |-filesystems.php
+  |  |-hashing.php
+  |  |-logging.php
+  |  |-mail.php
+  |  |-queue.php
+  |  |-services.php
+  |  |-session.php
+  |-database
+  |  |-factories
+  |  |  |-AsistenciaFactory.php
+  |  |  |-DetalleVentaFactory.php
+  |  |  |-EmpleadoFactory.php
+  |  |  |-MovimientoInventarioFactory.php
+  |  |  |-ProductoFactory.php
+  |  |  |-ProductoProveedorFactory.php
+  |  |  |-ProveedorFactory.php
+  |  |  |-UserFactory.php
+  |  |  |-VentaFactory.php
+  |  |-migrations
+  |  |  |-0001_01_01_000000_create_users_table.php
+  |  |  |-0001_01_01_000001_create_cache_table.php
+  |  |  |-0001_01_01_000002_create_jobs_table.php
+  |  |  |-2026_09_20_000000_create_empleado_table.php
+  |  |  |-2026_09_25_200342_add_authentication_fields_to_empleado_table.php
+  |  |  |-2026_09_26_160000_add_usuario_to_empleado_table.php
+  |  |  |-2026_09_29_201210_make_empleado_documento_identidad_nullable.php
+  |  |  |-2026_10_01_000000_create_producto_table.php
+  |  |  |-2026_10_02_000000_create_empleado_temporal_table.php
+  |  |  |-2026_10_03_000000_create_venta_table.php
+  |  |  |-2026_10_09_145239_add_deleted_at_to_producto_table.php
+  |  |  |-2026_10_09_152659_update_empleado_temporal_for_manual_names.php
+  |  |  |-2026_10_09_153455_add_check_in_and_check_out_times_to_empleado_temporal_table.php
+  |  |  |-2026_10_09_153946_make_temporary_employee_period_dates_optional.php
+  |  |  |-2026_10_23_151455_add_description_and_image_path_to_producto_table.php
+  |  |  |-2026_10_31_055401_add_tax_and_discount_fields_to_venta_table.php
+  |  |-seeders
+  |  |  |-AsistenciaSeeder.php
+  |  |  |-AuthUsersSeeder.php
+  |  |  |-DatabaseSeeder.php
+  |  |  |-DetalleVentaSeeder.php
+  |  |  |-EmpleadoSeeder.php
+  |  |  |-MovimientoInventarioSeeder.php
+  |  |  |-ProductoProveedorSeeder.php
+  |  |  |-ProductoSeeder.php
+  |  |  |-ProveedorSeeder.php
+  |  |  |-VentaSeeder.php
+  |-docker-compose.yml
+  |-Dockerfile
+  |-DOCUMENTACION_SISTEMA.html
+  |-DOCUMENTACION_SISTEMA.pdf
+  |-estructura.txt
+  |-estructura.txt~
+  |-majoo_completo.sql
+  |-majosql.sql
+  |-nginx
+  |  |-default.conf
+  |-package-lock.json
+  |-package.json
+  |-phpunit.xml
+  |-public
+  |  |-assets
+  |  |  |-css
+  |  |-css
+  |  |  |-auth.css
+  |  |  |-style.css
+  |  |  |-theme.css
+  |  |-favicon.ico
+  |  |-images
+  |  |  |-logo_roma.png
+  |  |  |-product-placeholder.svg
+  |  |-index.php
+  |  |-js
+  |  |  |-app.js
+  |  |  |-auth.js
+  |  |  |-dashboard.js
+  |  |  |-feedback.js
+  |  |  |-input-limits.js
+  |  |  |-live-lists.js
+  |  |  |-pos.js
+  |  |  |-theme.js
+  |  |-robots.txt
+  |-README.md
+  |-resources
+  |  |-css
+  |  |  |-app.css
+  |  |-js
+  |  |  |-app.js
+  |  |-views
+  |  |  |-asistencia
+  |  |  |-auth
+  |  |  |-components
+  |  |  |-dashboard
+  |  |  |-empleados
+  |  |  |-errors
+  |  |  |-inventario
+  |  |  |-layouts
+  |  |  |-mail
+  |  |  |-productos
+  |  |  |-proveedores
+  |  |  |-ventas
+  |  |  |-welcome.blade.php
+  |-routes
+  |  |-console.php
+  |  |-web.php
+  |-storage
+  |  |-app
+  |  |  |-private
+  |  |  |-public
+  |  |-logs
+  |  |  |-laravel.log
+  |-tests
+  |  |-Feature
+  |  |  |-AuthenticationTest.php
+  |  |  |-ExampleTest.php
+  |  |  |-MajooControllersTest.php
+  |  |  |-MajooModelsTest.php
+  |  |-Pest.php
+  |  |-TestCase.php
+  |  |-Unit
+  |  |  |-ExampleTest.php
+  |-vite.config.js
