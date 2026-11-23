@@ -249,9 +249,9 @@
                 <h1 class="titulo">FACTURA</h1>
 
                 <div class="empresa">
-                    <strong>MAJO - COVISIAN GROUP</strong><br>
-                    Sistema de ventas e inventario<br>
-                    Perú
+                    <strong>ROMA CLUB</strong><br>
+                    PRIVÉ & MANAGEMENT<br>
+                    Sistema de ventas e inventario
                 </div>
             </td>
 
@@ -426,7 +426,7 @@
                 </p>
 
                 <p>
-                    MAJO - COVISIAN GROUP
+                    ROMA CLUB
                 </p>
             </td>
         </tr>

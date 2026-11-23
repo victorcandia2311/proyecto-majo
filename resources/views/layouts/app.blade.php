@@ -212,7 +212,7 @@
             <div class="content-body">
                 @yield('content')
             </div>
-            <footer class="app-footer">MAJO · Sistema de inventario y ventas · Versión 2.01</footer>
+            <footer class="app-footer">ROMA CLUB · Sistema de inventario y ventas · Versión 2.01</footer>
         </main>
     </div>
 

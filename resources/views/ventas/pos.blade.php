@@ -590,7 +590,7 @@
     {{-- ── Page Header ── --}}
     <header class="pos-heading">
         <div>
-            <p class="text-uppercase small fw-bold text-secondary mb-2">MAJO · VENTA RÁPIDA</p>
+            <p class="text-uppercase small fw-bold text-secondary mb-2">VENTA RÁPIDA</p>
             <h1>¿Qué llevamos hoy?</h1>
             <p>Selecciona tus productos y confirma la venta en segundos.</p>
         </div>

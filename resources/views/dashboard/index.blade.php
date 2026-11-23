@@ -6,7 +6,7 @@
 <div class="dashboard-page" data-dashboard-endpoint="{{ route('dashboard.data') }}">
     <header class="dashboard-heading">
         <div>
-            <p class="dashboard-eyebrow">MAJO <span aria-hidden="true">/</span> INDICADORES PRINCIPALES</p>
+            <p class="dashboard-eyebrow">INDICADORES PRINCIPALES</p>
             <h1>Resumen General</h1>
         </div>
         <div class="d-flex align-items-center flex-wrap gap-2">
