@@ -264,7 +264,7 @@
 
             <td style="width: 25%; text-align: right; vertical-align: middle;">
                 <div class="logo">
-                    <img src="{{ asset('images/logo_roma.png') }}" alt="Logo ROMA CLUB">
+                    <img src="{{ public_path('images/logo_roma.png') }}" alt="Logo ROMA CLUB">
                 </div>
             </td>
         </tr>
