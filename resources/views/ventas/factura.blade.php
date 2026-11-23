@@ -58,17 +58,24 @@
         }
 
         .logo {
-            width: 85px;
-            height: 85px;
-            border-radius: 50%;
-            background-color: #a4a4a8;
-            color: #ffffff;
-            text-align: center;
-            vertical-align: middle;
-            font-size: 17px;
-            font-weight: bold;
-            line-height: 85px;
+            width: 84px;
+            height: 84px;
+            border-radius: 50%; /* Conserva la forma circular si ese es tu diseño actual */
+            background-color: #141923; /* Fondo oscuro para que resalte el logo de ROMA CLUB */
+            padding: 6px;
             margin-left: auto;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Ajusta el logo completo dentro del círculo sin cortarlo */
+            display: block;
         }
 
         /* Datos de facturación */
@@ -255,8 +262,10 @@
                 </div>
             </td>
 
-            <td style="width: 25%; text-align: right;">
-                <div class="logo">LOGO</div>
+            <td style="width: 25%; text-align: right; vertical-align: middle;">
+                <div class="logo">
+                    <img src="{{ asset('images/logo_roma.png') }}" alt="Logo ROMA CLUB">
+                </div>
             </td>
         </tr>
     </table>
